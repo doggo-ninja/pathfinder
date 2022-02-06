@@ -95,6 +95,12 @@ impl Canvas {
         &self.scene
     }
 
+    /// Returns a mutable reference to the inner scene.
+    #[inline]
+    pub fn scene_mut(&mut self) -> &mut Scene {
+        &mut self.scene
+    }
+
     /// Returns the inner scene, replacing it with a blank scene.
     #[inline]
     pub fn take_scene(&mut self) -> Scene {
