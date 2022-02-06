@@ -2423,6 +2423,7 @@ dependencies = [
  "pathfinder_geometry",
  "pathfinder_gl",
  "pathfinder_gpu",
+ "pathfinder_resources 0.5.0",
 ]
 
 [[package]]
