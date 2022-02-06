@@ -1744,7 +1744,7 @@ struct DemoData {
 impl DemoData {
     fn load(resources: &dyn ResourceLoader) -> DemoData {
         let data = resources.slurp("textures/example-nanovg.png").unwrap();
-        let image = image::load_from_memory(&data).unwrap().to_rgba();
+        let image = image::load_from_memory(&data).unwrap().to_rgba8();
         let image = Image::from_image_buffer(image);
         DemoData { image }
     }
