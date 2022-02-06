@@ -132,6 +132,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
+
+[[package]]
 name = "ascii"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -176,9 +182,9 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.12.3"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bitflags"
@@ -193,7 +199,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8fb2d74254a3a0b5cac33ac9f8ed0e44aa50378d9dbb2e5d83bd21ed1dc2c8a"
 dependencies = [
  "arrayref",
- "arrayvec",
+ "arrayvec 0.5.1",
  "constant_time_eq",
 ]
 
@@ -233,9 +239,9 @@ checksum = "b0a5e3906bcbf133e33c1d4d95afc664ad37fbdb9f6568d8043e7ea8c27d93d3"
 
 [[package]]
 name = "bytemuck"
-version = "1.2.0"
+version = "1.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37fa13df2292ecb479ec23aa06f4507928bef07839be9ef15281411076629431"
+checksum = "439989e6b8c38d1b6570a384ef1e49c8848128f5a97f3914baef02920842712f"
 
 [[package]]
 name = "byteorder"
@@ -341,7 +347,7 @@ dependencies = [
 name = "canvas_nanovg"
 version = "0.1.0"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.5.1",
  "euclid",
  "font-kit",
  "gl",
@@ -1093,9 +1099,9 @@ dependencies = [
 
 [[package]]
 name = "float-cmp"
-version = "0.5.3"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75224bec9bfe1a65e2d34132933f2de7fe79900c96a0174307554244ece8150e"
+checksum = "98de4bbd547a563b716d8dfa9aad1cb19bfab00f4fa09a6a4ed21dbcf44ce9c4"
 
 [[package]]
 name = "float-ord"
@@ -1155,6 +1161,17 @@ dependencies = [
  "servo-fontconfig",
  "walkdir",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "fontdb"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01b07f5c05414a0d8caba4c17eef8dc8b5c8955fc7c68d324191c7a56d3f3449"
+dependencies = [
+ "log",
+ "memmap2 0.5.2",
+ "ttf-parser 0.12.3",
 ]
 
 [[package]]
@@ -1404,16 +1421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "harfbuzz_rs"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31961611d8fe594957a088a0e50913a8c2b02563bd3ce39a5840ee697a6907ba"
-dependencies = [
- "bitflags",
- "harfbuzz-sys",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1644,11 +1651,11 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kurbo"
-version = "0.6.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "305989d523da0de59dd5e9b66c7c1eb2bcf7c18f538059f21a42ddf72b7333f7"
+checksum = "7a53776d271cfb873b17c618af0298445c88afc52837f3e948fa3fafd131f449"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.2",
 ]
 
 [[package]]
@@ -1690,7 +1697,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6607c62aa161d23d17a9072cc5da0be67cdfc89d3afb1e8d9c842bebc2525ffe"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.5.1",
  "bitflags",
  "cfg-if 1.0.0",
  "ryu",
@@ -1812,7 +1819,7 @@ version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 dependencies = [
- "libc 0.1.12",
+ "libc 0.2.117",
 ]
 
 [[package]]
@@ -1854,6 +1861,15 @@ name = "memmap2"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9b70ca2a6103ac8b665dc150b142ef0e4e89df640c9e6cf295d189c3caebe5a"
+dependencies = [
+ "libc 0.2.117",
+]
+
+[[package]]
+name = "memmap2"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe3179b85e1fd8b14447cbebadb75e45a1002f541b925f0bfec366d56a81c56d"
 dependencies = [
  "libc 0.2.117",
 ]
@@ -2270,7 +2286,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f923fb806c46266c02ab4a5b239735c144bdeda724a50ed058e5226f594cde3"
 dependencies = [
- "ttf-parser",
+ "ttf-parser 0.6.2",
 ]
 
 [[package]]
@@ -2411,7 +2427,7 @@ dependencies = [
 name = "pathfinder_content"
 version = "0.5.0"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.5.1",
  "bitflags",
  "image",
  "log",
@@ -2743,6 +2759,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pico-args"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db8bcd96cb740d03149cbad5518db9fd87126a10ab519c011893b1754134c468"
+
+[[package]]
 name = "pkg-config"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2916,9 +2938,9 @@ dependencies = [
 
 [[package]]
 name = "rctree"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be9e29cb19c8fe84169fcb07f8f11e66bc9e6e0280efd4715c54818296f8a4a8"
+checksum = "9ae028b272a6e99d9f8260ceefa3caa09300a8d6c8d2b2001316474bc52122e9"
 
 [[package]]
 name = "redox_syscall"
@@ -2966,9 +2988,9 @@ checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
 name = "roxmltree"
-version = "0.11.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5001f134077069d87f77c8b9452b690df2445f7a43f1c7ca4a1af8dd505789d"
+checksum = "921904a62e410e37e215c40381b7117f830d9d89ba60ab5236170541dd25646b"
 dependencies = [
  "xmlparser",
 ]
@@ -3037,6 +3059,22 @@ checksum = "dc7c727aded0be18c5b80c1640eae0ac8e396abf6fa8477d96cb37d18ee5ec59"
 dependencies = [
  "ab_glyph_rasterizer",
  "owned_ttf_parser",
+]
+
+[[package]]
+name = "rustybuzz"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44561062e583c4873162861261f16fd1d85fe927c4904d71329a4fe43dc355ef"
+dependencies = [
+ "bitflags",
+ "bytemuck",
+ "smallvec 1.8.0",
+ "ttf-parser 0.12.3",
+ "unicode-bidi-mirroring",
+ "unicode-ccc",
+ "unicode-general-category",
+ "unicode-script",
 ]
 
 [[package]]
@@ -3201,18 +3239,18 @@ dependencies = [
 
 [[package]]
 name = "simplecss"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "596554e63596d556a0dbd681416342ca61c75f1a45203201e7e77d3fa2fa9014"
+checksum = "a11be7c62927d9427e9f40f3444d5499d868648e2edbc4e2116de69e7ec0e89d"
 dependencies = [
  "log",
 ]
 
 [[package]]
 name = "siphasher"
-version = "0.2.3"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b8de496cf83d4ed58b6be86c3a275b8602f6ffe98d3024a869e124147a9a3ac"
+checksum = "a86232ab60fa71287d7f2ddae4a7073f6b7aac33631c3015abb556f08c6d0a3e"
 
 [[package]]
 name = "skribo"
@@ -3300,7 +3338,7 @@ dependencies = [
  "dlib 0.4.2",
  "lazy_static 1.4.0",
  "log",
- "memmap2",
+ "memmap2 0.1.0",
  "nix 0.18.0",
  "wayland-client 0.28.6",
  "wayland-cursor",
@@ -3425,11 +3463,10 @@ dependencies = [
 
 [[package]]
 name = "svgtypes"
-version = "0.5.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c536faaff1a10837cfe373142583f6e27d81e96beba339147e77b67c9f260ff"
+checksum = "dabb3eb59a457c56d5282ab4545609e2cc382b41f6af239bb8d59a7267ef94b3"
 dependencies = [
- "float-cmp",
  "siphasher",
 ]
 
@@ -3603,6 +3640,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e5d7cd7ab3e47dda6e56542f4bbf3824c15234958c6e1bd6aaa347e93499fdc"
 
 [[package]]
+name = "ttf-parser"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ae2f58a822f08abdaf668897e96a5656fe72f5a9ce66422423e8849384872e6"
+
+[[package]]
 name = "tuple"
 version = "0.4.3"
 source = "git+https://github.com/s3bk/tuple/#c1d2eef82e469a072c73a251d2dd0ecf4e67174a"
@@ -3625,6 +3668,24 @@ checksum = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"
 dependencies = [
  "matches",
 ]
+
+[[package]]
+name = "unicode-bidi-mirroring"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56d12260fb92d52f9008be7e4bca09f584780eb2266dc8fecc6a192bec561694"
+
+[[package]]
+name = "unicode-ccc"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc2520efa644f8268dce4dcd3050eaa7fc044fca03961e9998ac7e2e92b77cf1"
+
+[[package]]
+name = "unicode-general-category"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07547e3ee45e28326cc23faac56d44f58f16ab23e413db526debce3b0bfd2742"
 
 [[package]]
 name = "unicode-normalization"
@@ -3676,23 +3737,25 @@ dependencies = [
 
 [[package]]
 name = "usvg"
-version = "0.9.1"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d98fe4bbd8cfe811fb84dabebd670d26b1e633ecb4d3a4ef3a4b8c10252448d"
+checksum = "00f064d38f79ff69e3160e2fba884e4ede897061c15178041a3976371c68cab1"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "data-url",
  "flate2",
- "harfbuzz_rs",
+ "float-cmp",
+ "fontdb",
  "kurbo",
  "log",
- "memmap2",
+ "pico-args",
  "rctree",
  "roxmltree",
+ "rustybuzz",
  "simplecss",
  "siphasher",
  "svgtypes",
- "ttf-parser",
+ "ttf-parser 0.12.3",
  "unicode-bidi",
  "unicode-script",
  "unicode-vo",
@@ -4227,9 +4290,9 @@ checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
 
 [[package]]
 name = "xmlparser"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52613e655f6f11f63c0fe7d1c3b5ef69e44d96df9b65dab296b441ed0e1125f5"
+checksum = "114ba2b24d2167ef6d67d7d04c8cc86522b87f490025f39f0303b7db5bf5e3d8"
 
 [[package]]
 name = "xmlwriter"
