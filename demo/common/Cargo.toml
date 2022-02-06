@@ -59,6 +59,7 @@ git = "https://github.com/pdf-rs/pdf"
 
 [dependencies.pdf_render]
 git = "https://github.com/pdf-rs/pdf_render"
+rev = "1b7480229c4c71e2b854ec2473edb9a28ab111ac"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 metal = "0.18"

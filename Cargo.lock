@@ -2795,12 +2795,12 @@ dependencies = [
 [[package]]
 name = "pdf_render"
 version = "0.1.0"
-source = "git+https://github.com/pdf-rs/pdf_render#1b7480229c4c71e2b854ec2473edb9a28ab111ac"
+source = "git+https://github.com/pdf-rs/pdf_render?rev=1b7480229c4c71e2b854ec2473edb9a28ab111ac#1b7480229c4c71e2b854ec2473edb9a28ab111ac"
 dependencies = [
  "font",
  "image",
  "instant",
- "itertools 0.10.3",
+ "itertools 0.9.0",
  "log",
  "pathfinder_color",
  "pathfinder_content",
