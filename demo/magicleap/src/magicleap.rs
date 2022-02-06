@@ -32,9 +32,9 @@ use crate::c_api::ML_RESULT_TIMEOUT;
 use crate::c_api::ML_VIRTUAL_CAMERA_COUNT;
 
 use egl;
-use egl::EGL_NO_SURFACE;
 use egl::EGLContext;
 use egl::EGLDisplay;
+use egl::EGL_NO_SURFACE;
 
 use gl;
 use gl::types::GLuint;
@@ -53,12 +53,12 @@ use pathfinder_geometry::rect::RectI;
 use pathfinder_geometry::transform3d::Perspective;
 use pathfinder_geometry::transform3d::Transform4F;
 use pathfinder_geometry::util;
-use pathfinder_geometry::vector::Vector2I;
-use pathfinder_geometry::vector::Vector2F;
 use pathfinder_geometry::vector::vec2i;
+use pathfinder_geometry::vector::Vector2F;
+use pathfinder_geometry::vector::Vector2I;
 use pathfinder_gl::GLVersion;
-use pathfinder_resources::ResourceLoader;
 use pathfinder_resources::fs::FilesystemResourceLoader;
+use pathfinder_resources::ResourceLoader;
 use pathfinder_simd::default::F32x4;
 
 use rayon::ThreadPoolBuilder;
@@ -99,19 +99,20 @@ impl Window for MagicLeapWindow {
         self.framebuffer_id
     }
 
-    fn adjust_thread_pool_settings(&self, thread_pool_builder: ThreadPoolBuilder) -> ThreadPoolBuilder {
+    fn adjust_thread_pool_settings(
+        &self,
+        thread_pool_builder: ThreadPoolBuilder,
+    ) -> ThreadPoolBuilder {
         thread_pool_builder.start_handler(|id| unsafe { init_scene_thread(id) })
     }
 
-    fn create_user_event_id (&self) -> u32 {
+    fn create_user_event_id(&self) -> u32 {
         0
     }
 
-    fn push_user_event(_: u32, _: u32) {
-    }
+    fn push_user_event(_: u32, _: u32) {}
 
-    fn present_open_svg_dialog(&mut self) {
-    }
+    fn present_open_svg_dialog(&mut self) {}
 
     fn run_save_dialog(&self, _: &str) -> Result<PathBuf, ()> {
         Err(())
@@ -125,7 +126,10 @@ impl Window for MagicLeapWindow {
         self.begin_frame();
         let eye = match view {
             View::Stereo(eye) if (eye as usize) < ML_VIRTUAL_CAMERA_COUNT => eye as usize,
-            _ => { debug!("Asked for unexpected view: {:?}", view); 0 }
+            _ => {
+                debug!("Asked for unexpected view: {:?}", view);
+                0
+            }
         };
         debug!("Making {} current.", eye);
         let viewport = self.virtual_camera_array.viewport;
@@ -135,9 +139,26 @@ impl Window for MagicLeapWindow {
         let layer_id = virtual_camera.virtual_camera_name as i32;
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, self.framebuffer_id);
-            gl::FramebufferTextureLayer(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, color_id, 0, layer_id);
-            gl::FramebufferTextureLayer(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, depth_id, 0, layer_id);
-            gl::Viewport(viewport.x as i32, viewport.y as i32, viewport.w as i32, viewport.h as i32);
+            gl::FramebufferTextureLayer(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                color_id,
+                0,
+                layer_id,
+            );
+            gl::FramebufferTextureLayer(
+                gl::FRAMEBUFFER,
+                gl::DEPTH_ATTACHMENT,
+                depth_id,
+                0,
+                layer_id,
+            );
+            gl::Viewport(
+                viewport.x as i32,
+                viewport.y as i32,
+                viewport.w as i32,
+                viewport.h as i32,
+            );
         }
         debug!("Made {} current.", eye);
     }
@@ -161,7 +182,7 @@ impl MagicLeapWindow {
         debug!("Creating MagicLeapWindow");
         let mut framebuffer_id = 0;
         let graphics_options = MLGraphicsOptions::default();
-        let mut graphics_client =  unsafe { mem::zeroed() };
+        let mut graphics_client = unsafe { mem::zeroed() };
         let mut head_tracker = unsafe { mem::zeroed() };
         let mut targets = unsafe { mem::zeroed() };
         let virtual_camera_array = unsafe { mem::zeroed() };
@@ -175,7 +196,10 @@ impl MagicLeapWindow {
             MLHeadTrackingCreate(&mut head_tracker).unwrap();
             MLGraphicsGetRenderTargets(graphics_client, &mut targets).unwrap();
         }
-        let (max_width, max_height) = targets.buffers.iter().map(|buffer| buffer.color)
+        let (max_width, max_height) = targets
+            .buffers
+            .iter()
+            .map(|buffer| buffer.color)
             .chain(targets.buffers.iter().map(|buffer| buffer.depth))
             .map(|target| (target.width as i32, target.height as i32))
             .max()
@@ -218,7 +242,12 @@ impl MagicLeapWindow {
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, self.framebuffer_id);
                 MLGraphicsInitFrameParams(&mut params).unwrap();
-                let mut result = MLGraphicsBeginFrame(self.graphics_client, &params, &mut self.frame_handle, &mut self.virtual_camera_array);
+                let mut result = MLGraphicsBeginFrame(
+                    self.graphics_client,
+                    &params,
+                    &mut self.frame_handle,
+                    &mut self.virtual_camera_array,
+                );
                 if result == ML_RESULT_TIMEOUT {
                     info!("PF frame timeout");
                     let mut sleep = Duration::from_millis(1);
@@ -227,7 +256,12 @@ impl MagicLeapWindow {
                         sleep = (sleep * 2).min(max_sleep);
                         info!("PF exponential backoff {}ms", sleep.as_millis());
                         thread::sleep(sleep);
-                        result = MLGraphicsBeginFrame(self.graphics_client, &params, &mut self.frame_handle, &mut self.virtual_camera_array);
+                        result = MLGraphicsBeginFrame(
+                            self.graphics_client,
+                            &params,
+                            &mut self.frame_handle,
+                            &mut self.virtual_camera_array,
+                        );
                     }
                     info!("PF frame finished timeout");
                 }
@@ -236,21 +270,26 @@ impl MagicLeapWindow {
             let virtual_camera_array = &self.virtual_camera_array;
             let initial_camera = self.initial_camera_transform.get_or_insert_with(|| {
                 let initial_offset = Transform4F::from_translation(0.0, 0.0, 1.0);
-	        let mut camera = virtual_camera_array.virtual_cameras[0].transform;
-		for i in 1..virtual_camera_array.num_virtual_cameras {
-		    let next = virtual_camera_array.virtual_cameras[i as usize].transform;
-		    camera = camera.lerp(next, 1.0 / (i as f32 + 1.0));
-		}
-		Transform4F::from(camera).post_mul(&initial_offset)
+                let mut camera = virtual_camera_array.virtual_cameras[0].transform;
+                for i in 1..virtual_camera_array.num_virtual_cameras {
+                    let next = virtual_camera_array.virtual_cameras[i as usize].transform;
+                    camera = camera.lerp(next, 1.0 / (i as f32 + 1.0));
+                }
+                Transform4F::from(camera).post_mul(&initial_offset)
             });
             let camera_transforms = (0..virtual_camera_array.num_virtual_cameras)
                 .map(|i| {
-		    let camera = &virtual_camera_array.virtual_cameras[i as usize];
+                    let camera = &virtual_camera_array.virtual_cameras[i as usize];
                     let projection = Transform4F::from(camera.projection);
                     let size = RectI::from(virtual_camera_array.viewport).size();
                     let perspective = Perspective::new(&projection, size);
-                    let modelview_to_eye = Transform4F::from(camera.transform).inverse().post_mul(initial_camera);
-                    OcularTransform { perspective, modelview_to_eye }
+                    let modelview_to_eye = Transform4F::from(camera.transform)
+                        .inverse()
+                        .post_mul(initial_camera);
+                    OcularTransform {
+                        perspective,
+                        modelview_to_eye,
+                    }
                 })
                 .collect();
             self.in_frame = true;
@@ -266,7 +305,8 @@ impl MagicLeapWindow {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
                 for i in 0..self.virtual_camera_array.num_virtual_cameras {
                     let virtual_camera = &self.virtual_camera_array.virtual_cameras[i as usize];
-                    MLGraphicsSignalSyncObjectGL(self.graphics_client, virtual_camera.sync_object).unwrap();
+                    MLGraphicsSignalSyncObjectGL(self.graphics_client, virtual_camera.sync_object)
+                        .unwrap();
                 }
                 MLGraphicsEndFrame(self.graphics_client, self.frame_handle).unwrap();
             }
@@ -358,8 +398,7 @@ impl MLTransform {
 
 impl From<MLTransform> for Transform4F {
     fn from(mat: MLTransform) -> Self {
-        Transform4F::from(mat.rotation)
-           .pre_mul(&Transform4F::from(mat.position))
+        Transform4F::from(mat.rotation).pre_mul(&Transform4F::from(mat.position))
     }
 }
 
@@ -390,10 +429,9 @@ impl From<MLQuaternionf> for Transform4F {
 impl From<MLMat4f> for Transform4F {
     fn from(mat: MLMat4f) -> Self {
         let a = mat.matrix_colmajor;
-        Transform4F::row_major(a[0], a[4], a[8],  a[12],
-                                  a[1], a[5], a[9],  a[13],
-                                  a[2], a[6], a[10], a[14],
-                                  a[3], a[7], a[11], a[15])
+        Transform4F::row_major(
+            a[0], a[4], a[8], a[12], a[1], a[5], a[9], a[13], a[2], a[6], a[10], a[14], a[3], a[7],
+            a[11], a[15],
+        )
     }
 }
-

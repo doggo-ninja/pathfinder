@@ -22,31 +22,31 @@ use gl::types::GLuint;
 
 use log::info;
 
-use pathfinder_demo::DemoApp;
-use pathfinder_demo::Options;
-use pathfinder_demo::UIVisibility;
-use pathfinder_demo::BackgroundColor;
-use pathfinder_demo::Mode;
+use pathfinder_color::ColorF;
 use pathfinder_demo::window::Event;
 use pathfinder_demo::window::SVGPath;
+use pathfinder_demo::BackgroundColor;
+use pathfinder_demo::DemoApp;
+use pathfinder_demo::Mode;
+use pathfinder_demo::Options;
+use pathfinder_demo::UIVisibility;
 use pathfinder_geometry::rect::RectI;
 use pathfinder_geometry::transform2d::Transform2F;
+use pathfinder_geometry::vector::vec2i;
 use pathfinder_geometry::vector::Vector2F;
 use pathfinder_geometry::vector::Vector2I;
-use pathfinder_geometry::vector::vec2i;
-use pathfinder_color::ColorF;
 use pathfinder_gl::GLDevice;
 use pathfinder_gl::GLVersion;
 use pathfinder_gpu::ClearParams;
 use pathfinder_gpu::Device;
 use pathfinder_renderer::concurrent::executor::SequentialExecutor;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
-use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::gpu::renderer::DestFramebuffer;
+use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::RenderOptions;
 use pathfinder_renderer::options::RenderTransform;
-use pathfinder_resources::ResourceLoader;
 use pathfinder_resources::fs::FilesystemResourceLoader;
+use pathfinder_resources::ResourceLoader;
 use pathfinder_simd::default::F32x4;
 use pathfinder_svg::SVGScene;
 
@@ -72,10 +72,17 @@ struct ImmersiveApp {
 }
 
 #[no_mangle]
-pub extern "C" fn magicleap_pathfinder_demo_init(egl_display: EGLDisplay, egl_context: EGLContext) -> *mut c_void {
-    unsafe { c_api::MLLoggingLog(c_api::MLLogLevel::Info,
-                                 b"Pathfinder Demo\0".as_ptr() as *const _,
-                                 b"Initializing\0".as_ptr() as *const _) };
+pub extern "C" fn magicleap_pathfinder_demo_init(
+    egl_display: EGLDisplay,
+    egl_context: EGLContext,
+) -> *mut c_void {
+    unsafe {
+        c_api::MLLoggingLog(
+            c_api::MLLogLevel::Info,
+            b"Pathfinder Demo\0".as_ptr() as *const _,
+            b"Initializing\0".as_ptr() as *const _,
+        )
+    };
 
     let tag = CString::new("Pathfinder Demo").unwrap();
     let level = log::LevelFilter::Warn;
@@ -97,7 +104,11 @@ pub extern "C" fn magicleap_pathfinder_demo_init(egl_display: EGLDisplay, egl_co
     info!("Initialized app");
 
     let (sender, receiver) = crossbeam_channel::unbounded();
-    Box::into_raw(Box::new(ImmersiveApp { sender, receiver, demo })) as *mut c_void
+    Box::into_raw(Box::new(ImmersiveApp {
+        sender,
+        receiver,
+        demo,
+    })) as *mut c_void
 }
 
 #[no_mangle]
@@ -124,12 +135,17 @@ pub unsafe extern "C" fn magicleap_pathfinder_demo_run(app: *mut c_void) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn magicleap_pathfinder_demo_load(app: *mut c_void, svg_filename: *const c_char) {
+pub unsafe extern "C" fn magicleap_pathfinder_demo_load(
+    app: *mut c_void,
+    svg_filename: *const c_char,
+) {
     let app = app as *mut ImmersiveApp;
     if let Some(app) = app.as_mut() {
         let svg_filename = CStr::from_ptr(svg_filename).to_string_lossy().into_owned();
         info!("Loading {}.", svg_filename);
-        let _ = app.sender.send(Event::OpenSVG(SVGPath::Resource(svg_filename)));
+        let _ = app
+            .sender
+            .send(Event::OpenSVG(SVGPath::Resource(svg_filename)));
     }
 }
 
@@ -150,9 +166,13 @@ pub struct MagicLeapPathfinderRenderOptions {
 
 #[no_mangle]
 pub extern "C" fn magicleap_pathfinder_init() -> *mut c_void {
-    unsafe { c_api::MLLoggingLog(c_api::MLLogLevel::Info,
-                                 b"Pathfinder Demo\0".as_ptr() as *const _,
-                                 b"Initializing\0".as_ptr() as *const _) };
+    unsafe {
+        c_api::MLLoggingLog(
+            c_api::MLLogLevel::Info,
+            b"Pathfinder Demo\0".as_ptr() as *const _,
+            b"Initializing\0".as_ptr() as *const _,
+        )
+    };
 
     let tag = CString::new("Pathfinder Demo").unwrap();
     let level = log::LevelFilter::Info;
@@ -175,12 +195,17 @@ pub extern "C" fn magicleap_pathfinder_init() -> *mut c_void {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn magicleap_pathfinder_render(pf: *mut c_void, options: *const MagicLeapPathfinderRenderOptions) {
+pub unsafe extern "C" fn magicleap_pathfinder_render(
+    pf: *mut c_void,
+    options: *const MagicLeapPathfinderRenderOptions,
+) {
     let pf = pf as *mut MagicLeapPathfinder;
     if let (Some(pf), Some(options)) = (pf.as_mut(), options.as_ref()) {
         let resources = &pf.resources;
 
-        let svg_filename = CStr::from_ptr(options.svg_filename).to_string_lossy().into_owned();
+        let svg_filename = CStr::from_ptr(options.svg_filename)
+            .to_string_lossy()
+            .into_owned();
         let svg = pf.svgs.entry(svg_filename).or_insert_with(|| {
             let svg_filename = CStr::from_ptr(options.svg_filename).to_string_lossy();
             let data = resources.slurp(&*svg_filename).unwrap();
@@ -191,35 +216,56 @@ pub unsafe extern "C" fn magicleap_pathfinder_render(pf: *mut c_void, options: *
         let mut width = 0;
         let mut height = 0;
         egl::query_surface(options.display, options.surface, egl::EGL_WIDTH, &mut width);
-        egl::query_surface(options.display, options.surface, egl::EGL_HEIGHT, &mut height);
+        egl::query_surface(
+            options.display,
+            options.surface,
+            egl::EGL_HEIGHT,
+            &mut height,
+        );
         let size = vec2i(width, height);
 
         let viewport_origin = vec2i(options.viewport[0] as i32, options.viewport[1] as i32);
         let viewport_size = vec2i(options.viewport[2] as i32, options.viewport[3] as i32);
         let viewport = RectI::new(viewport_origin, viewport_size);
 
-        let bg_color = ColorF(F32x4::new(options.bg_color[0], options.bg_color[1], options.bg_color[2], options.bg_color[3]));
+        let bg_color = ColorF(F32x4::new(
+            options.bg_color[0],
+            options.bg_color[1],
+            options.bg_color[2],
+            options.bg_color[3],
+        ));
 
-        let renderer = pf.renderers.entry((options.display, options.surface)).or_insert_with(|| {
-            let mut fbo = 0;
-            gl::GetIntegerv(gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
-            let device = GLDevice::new(GLVersion::GLES3, fbo as GLuint);
-            let dest_framebuffer = DestFramebuffer::Default { viewport, window_size: size };
-            Renderer::new(device, resources, dest_framebuffer)
-        });
+        let renderer = pf
+            .renderers
+            .entry((options.display, options.surface))
+            .or_insert_with(|| {
+                let mut fbo = 0;
+                gl::GetIntegerv(gl::DRAW_FRAMEBUFFER_BINDING, &mut fbo);
+                let device = GLDevice::new(GLVersion::GLES3, fbo as GLuint);
+                let dest_framebuffer = DestFramebuffer::Default {
+                    viewport,
+                    window_size: size,
+                };
+                Renderer::new(device, resources, dest_framebuffer)
+            });
 
         renderer.set_main_framebuffer_size(size);
         renderer.device.bind_default_framebuffer(viewport);
-        renderer.device.clear(&ClearParams { color: Some(bg_color), ..ClearParams::default() });
+        renderer.device.clear(&ClearParams {
+            color: Some(bg_color),
+            ..ClearParams::default()
+        });
         renderer.disable_depth();
 
         svg.scene.set_view_box(viewport.to_f32());
 
-        let scale = i32::min(viewport_size.x(), viewport_size.y()) as f32 /
-            f32::max(svg.scene.bounds().size().x(), svg.scene.bounds().size().y());
+        let scale = i32::min(viewport_size.x(), viewport_size.y()) as f32
+            / f32::max(svg.scene.bounds().size().x(), svg.scene.bounds().size().y());
         let transform = Transform2F::from_translation(svg.scene.bounds().size().scale(-0.5))
             .post_mul(&Transform2F::from_scale(scale))
-            .post_mul(&Transform2F::from_translation(viewport_size.to_f32().scale(0.5)));
+            .post_mul(&Transform2F::from_translation(
+                viewport_size.to_f32().scale(0.5),
+            ));
 
         let render_options = RenderOptions {
             transform: RenderTransform::Transform2D(transform),

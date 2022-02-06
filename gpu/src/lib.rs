@@ -22,7 +22,7 @@ use image::ImageFormat;
 use pathfinder_color::ColorF;
 use pathfinder_geometry::rect::RectI;
 use pathfinder_geometry::transform3d::Transform4F;
-use pathfinder_geometry::vector::{Vector2I, vec2i};
+use pathfinder_geometry::vector::{vec2i, Vector2I};
 use pathfinder_resources::ResourceLoader;
 use pathfinder_simd::default::{F32x2, F32x4, I32x2};
 use std::ops::Range;
@@ -50,64 +50,95 @@ pub trait Device: Sized {
     fn device_name(&self) -> String;
     fn feature_level(&self) -> FeatureLevel;
     fn create_texture(&self, format: TextureFormat, size: Vector2I) -> Self::Texture;
-    fn create_texture_from_data(&self, format: TextureFormat, size: Vector2I, data: TextureDataRef)
-                                -> Self::Texture;
-    fn create_shader(&self, resources: &dyn ResourceLoader, name: &str, kind: ShaderKind)
-                     -> Self::Shader;
-    fn create_shader_from_source(&self, name: &str, source: &[u8], kind: ShaderKind)
-                                 -> Self::Shader;
+    fn create_texture_from_data(
+        &self,
+        format: TextureFormat,
+        size: Vector2I,
+        data: TextureDataRef,
+    ) -> Self::Texture;
+    fn create_shader(
+        &self,
+        resources: &dyn ResourceLoader,
+        name: &str,
+        kind: ShaderKind,
+    ) -> Self::Shader;
+    fn create_shader_from_source(
+        &self,
+        name: &str,
+        source: &[u8],
+        kind: ShaderKind,
+    ) -> Self::Shader;
     fn create_vertex_array(&self) -> Self::VertexArray;
-    fn create_program_from_shaders(&self,
-                                   resources: &dyn ResourceLoader,
-                                   name: &str,
-                                   shaders: ProgramKind<Self::Shader>)
-                                   -> Self::Program;
-    fn set_compute_program_local_size(&self,
-                                      program: &mut Self::Program,
-                                      local_size: ComputeDimensions);
+    fn create_program_from_shaders(
+        &self,
+        resources: &dyn ResourceLoader,
+        name: &str,
+        shaders: ProgramKind<Self::Shader>,
+    ) -> Self::Program;
+    fn set_compute_program_local_size(
+        &self,
+        program: &mut Self::Program,
+        local_size: ComputeDimensions,
+    );
     fn get_vertex_attr(&self, program: &Self::Program, name: &str) -> Option<Self::VertexAttr>;
     fn get_uniform(&self, program: &Self::Program, name: &str) -> Self::Uniform;
     fn get_texture_parameter(&self, program: &Self::Program, name: &str) -> Self::TextureParameter;
     fn get_image_parameter(&self, program: &Self::Program, name: &str) -> Self::ImageParameter;
-    fn get_storage_buffer(&self, program: &Self::Program, name: &str, binding: u32)
-                          -> Self::StorageBuffer;
-    fn bind_buffer(&self,
-                   vertex_array: &Self::VertexArray,
-                   buffer: &Self::Buffer,
-                   target: BufferTarget);
-    fn configure_vertex_attr(&self,
-                             vertex_array: &Self::VertexArray,
-                             attr: &Self::VertexAttr,
-                             descriptor: &VertexAttrDescriptor);
+    fn get_storage_buffer(
+        &self,
+        program: &Self::Program,
+        name: &str,
+        binding: u32,
+    ) -> Self::StorageBuffer;
+    fn bind_buffer(
+        &self,
+        vertex_array: &Self::VertexArray,
+        buffer: &Self::Buffer,
+        target: BufferTarget,
+    );
+    fn configure_vertex_attr(
+        &self,
+        vertex_array: &Self::VertexArray,
+        attr: &Self::VertexAttr,
+        descriptor: &VertexAttrDescriptor,
+    );
     fn create_framebuffer(&self, texture: Self::Texture) -> Self::Framebuffer;
     fn create_buffer(&self, mode: BufferUploadMode) -> Self::Buffer;
-    fn allocate_buffer<T>(&self,
-                          buffer: &Self::Buffer,
-                          data: BufferData<T>,
-                          target: BufferTarget);
-    fn upload_to_buffer<T>(&self,
-                           buffer: &Self::Buffer,
-                           position: usize,
-                           data: &[T],
-                           target: BufferTarget);
+    fn allocate_buffer<T>(&self, buffer: &Self::Buffer, data: BufferData<T>, target: BufferTarget);
+    fn upload_to_buffer<T>(
+        &self,
+        buffer: &Self::Buffer,
+        position: usize,
+        data: &[T],
+        target: BufferTarget,
+    );
     fn framebuffer_texture<'f>(&self, framebuffer: &'f Self::Framebuffer) -> &'f Self::Texture;
     fn destroy_framebuffer(&self, framebuffer: Self::Framebuffer) -> Self::Texture;
     fn texture_format(&self, texture: &Self::Texture) -> TextureFormat;
     fn texture_size(&self, texture: &Self::Texture) -> Vector2I;
     fn set_texture_sampling_mode(&self, texture: &Self::Texture, flags: TextureSamplingFlags);
     fn upload_to_texture(&self, texture: &Self::Texture, rect: RectI, data: TextureDataRef);
-    fn read_pixels(&self, target: &RenderTarget<Self>, viewport: RectI)
-                   -> Self::TextureDataReceiver;
-    fn read_buffer(&self, buffer: &Self::Buffer, target: BufferTarget, range: Range<usize>)
-                   -> Self::BufferDataReceiver;
+    fn read_pixels(
+        &self,
+        target: &RenderTarget<Self>,
+        viewport: RectI,
+    ) -> Self::TextureDataReceiver;
+    fn read_buffer(
+        &self,
+        buffer: &Self::Buffer,
+        target: BufferTarget,
+        range: Range<usize>,
+    ) -> Self::BufferDataReceiver;
     fn begin_commands(&self);
     fn end_commands(&self);
     fn draw_arrays(&self, index_count: u32, render_state: &RenderState<Self>);
     fn draw_elements(&self, index_count: u32, render_state: &RenderState<Self>);
-    fn draw_elements_instanced(&self,
-                               index_count: u32,
-                               instance_count: u32,
-                               render_state: &RenderState<Self>);
+    fn draw_elements_instanced(
+        &self,
+        index_count: u32,
+        instance_count: u32,
+        render_state: &RenderState<Self>,
+    );
     fn dispatch_compute(&self, dimensions: ComputeDimensions, state: &ComputeState<Self>);
     fn add_fence(&self) -> Self::Fence;
     fn wait_for_fence(&self, fence: &Self::Fence);
@@ -121,11 +152,12 @@ pub trait Device: Sized {
     fn try_recv_buffer(&self, receiver: &Self::BufferDataReceiver) -> Option<Vec<u8>>;
     fn recv_buffer(&self, receiver: &Self::BufferDataReceiver) -> Vec<u8>;
 
-    fn create_texture_from_png(&self,
-                               resources: &dyn ResourceLoader,
-                               name: &str,
-                               format: TextureFormat)
-                               -> Self::Texture {
+    fn create_texture_from_png(
+        &self,
+        resources: &dyn ResourceLoader,
+        name: &str,
+        format: TextureFormat,
+    ) -> Self::Texture {
         let data = resources.slurp(&format!("textures/{}.png", name)).unwrap();
         let image = image::load_from_memory_with_format(&data, ImageFormat::Png).unwrap();
         match format {
@@ -143,11 +175,13 @@ pub trait Device: Sized {
         }
     }
 
-    fn upload_png_to_texture(&self,
-                             resources: &dyn ResourceLoader,
-                             name: &str,
-                             texture: &Self::Texture,
-                             format: TextureFormat) {
+    fn upload_png_to_texture(
+        &self,
+        resources: &dyn ResourceLoader,
+        name: &str,
+        texture: &Self::Texture,
+        format: TextureFormat,
+    ) {
         let data = resources.slurp(&format!("textures/{}.png", name)).unwrap();
         let image = image::load_from_memory_with_format(&data, ImageFormat::Png).unwrap();
         match format {
@@ -174,12 +208,10 @@ pub trait Device: Sized {
         shader_names: ProgramKind<&str>,
     ) -> Self::Program {
         let shaders = match shader_names {
-            ProgramKind::Raster { vertex, fragment } => {
-                ProgramKind::Raster {
-                    vertex: self.create_shader(resources, vertex, ShaderKind::Vertex),
-                    fragment: self.create_shader(resources, fragment, ShaderKind::Fragment),
-                }
-            }
+            ProgramKind::Raster { vertex, fragment } => ProgramKind::Raster {
+                vertex: self.create_shader(resources, vertex, ShaderKind::Vertex),
+                fragment: self.create_shader(resources, fragment, ShaderKind::Fragment),
+            },
             ProgramKind::Compute(compute) => {
                 ProgramKind::Compute(self.create_shader(resources, compute, ShaderKind::Compute))
             }
@@ -188,7 +220,10 @@ pub trait Device: Sized {
     }
 
     fn create_raster_program(&self, resources: &dyn ResourceLoader, name: &str) -> Self::Program {
-        let shaders = ProgramKind::Raster { vertex: name, fragment: name };
+        let shaders = ProgramKind::Raster {
+            vertex: name,
+            fragment: name,
+        };
         self.create_program_from_shader_names(resources, name, shaders)
     }
 
@@ -253,10 +288,7 @@ pub enum ShaderKind {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ProgramKind<T> {
-    Raster {
-        vertex: T,
-        fragment: T,
-    },
+    Raster { vertex: T, fragment: T },
     Compute(T),
 }
 
@@ -287,7 +319,10 @@ pub enum Primitive {
 }
 
 #[derive(Clone)]
-pub struct RenderState<'a, D> where D: Device {
+pub struct RenderState<'a, D>
+where
+    D: Device,
+{
     pub target: &'a RenderTarget<'a, D>,
     pub program: &'a D::Program,
     pub vertex_array: &'a D::VertexArray,
@@ -301,7 +336,10 @@ pub struct RenderState<'a, D> where D: Device {
 }
 
 #[derive(Clone)]
-pub struct ComputeState<'a, D> where D: Device {
+pub struct ComputeState<'a, D>
+where
+    D: Device,
+{
     pub program: &'a D::Program,
     pub uniforms: &'a [UniformBinding<'a, D::Uniform>],
     pub textures: &'a [TextureBinding<'a, D::TextureParameter, D::Texture>],
@@ -332,7 +370,10 @@ pub struct ClearOps {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum RenderTarget<'a, D> where D: Device {
+pub enum RenderTarget<'a, D>
+where
+    D: Device,
+{
     Default,
     Framebuffer(&'a D::Framebuffer),
 }
@@ -537,8 +578,11 @@ pub enum ImageAccess {
 
 impl<'a> TextureDataRef<'a> {
     #[doc(hidden)]
-    pub fn check_and_extract_data_ptr(self, minimum_size: Vector2I, format: TextureFormat)
-                                      -> *const c_void {
+    pub fn check_and_extract_data_ptr(
+        self,
+        minimum_size: Vector2I,
+        format: TextureFormat,
+    ) -> *const c_void {
         let channels = match (format, self) {
             (TextureFormat::R8, TextureDataRef::U8(_)) => 1,
             (TextureFormat::RGBA8, TextureDataRef::U8(_)) => 4,

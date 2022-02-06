@@ -10,14 +10,14 @@
 
 //! A simple API for Pathfinder that mirrors a subset of HTML canvas.
 
-pub use pathfinder_color::{ColorF, ColorU, rgbaf, rgbau, rgbf, rgbu};
 pub use pathfinder_color::{color_slice_to_u8_slice, u8_slice_to_color_slice, u8_vec_to_color_vec};
+pub use pathfinder_color::{rgbaf, rgbau, rgbf, rgbu, ColorF, ColorU};
 pub use pathfinder_content::fill::FillRule;
-pub use pathfinder_content::stroke::LineCap;
 pub use pathfinder_content::outline::ArcDirection;
+pub use pathfinder_content::stroke::LineCap;
 pub use pathfinder_geometry::rect::{RectF, RectI};
 pub use pathfinder_geometry::transform2d::Transform2F;
-pub use pathfinder_geometry::vector::{IntoVector2F, Vector2F, Vector2I, vec2f, vec2i};
+pub use pathfinder_geometry::vector::{vec2f, vec2i, IntoVector2F, Vector2F, Vector2I};
 
 use pathfinder_content::dash::OutlineDash;
 use pathfinder_content::effects::{BlendMode, BlurDirection, PatternFilter};
@@ -25,25 +25,25 @@ use pathfinder_content::gradient::Gradient;
 use pathfinder_content::outline::{Contour, Outline};
 use pathfinder_content::pattern::{Image, Pattern};
 use pathfinder_content::render_target::RenderTargetId;
-use pathfinder_content::stroke::{LineJoin as StrokeLineJoin};
+use pathfinder_content::stroke::LineJoin as StrokeLineJoin;
 use pathfinder_content::stroke::{OutlineStrokeToFill, StrokeStyle};
 use pathfinder_geometry::line_segment::LineSegment2F;
 use pathfinder_renderer::paint::{Paint, PaintCompositeOp};
 use pathfinder_renderer::scene::{ClipPath, ClipPathId, DrawPath, RenderTarget, Scene};
 use std::borrow::Cow;
 use std::default::Default;
-use std::f32::consts::PI;
 use std::f32;
+use std::f32::consts::PI;
 use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::mem;
 use std::sync::Arc;
 
 pub use text::CanvasFontContext;
 
-#[cfg(feature = "pf-text")]
-use skribo::FontCollection;
 #[cfg(not(feature = "pf-text"))]
 use crate::text::FontCollection;
+#[cfg(feature = "pf-text")]
+use skribo::FontCollection;
 
 #[cfg(feature = "pf-text")]
 pub use text::TextMetrics;
@@ -116,11 +116,16 @@ impl Canvas {
         self.scene
     }
 
-    pub fn get_context_2d(self, canvas_font_context: CanvasFontContext)
-                          -> CanvasRenderingContext2D {
+    pub fn get_context_2d(
+        self,
+        canvas_font_context: CanvasFontContext,
+    ) -> CanvasRenderingContext2D {
         #[cfg(feature = "pf-text")]
-        let default_font_collection =
-            canvas_font_context.0.borrow().default_font_collection.clone();
+        let default_font_collection = canvas_font_context
+            .0
+            .borrow()
+            .default_font_collection
+            .clone();
         #[cfg(not(feature = "pf-text"))]
         let default_font_collection = Arc::new(FontCollection);
         CanvasRenderingContext2D {
@@ -280,12 +285,18 @@ impl CanvasRenderingContext2D {
     // Fill and stroke styles
 
     #[inline]
-    pub fn set_fill_style<FS>(&mut self, new_fill_style: FS) where FS: Into<FillStyle> {
+    pub fn set_fill_style<FS>(&mut self, new_fill_style: FS)
+    where
+        FS: Into<FillStyle>,
+    {
         self.current_state.fill_paint = new_fill_style.into().into_paint();
     }
 
     #[inline]
-    pub fn set_stroke_style<FS>(&mut self, new_stroke_style: FS) where FS: Into<FillStyle> {
+    pub fn set_stroke_style<FS>(&mut self, new_stroke_style: FS)
+    where
+        FS: Into<FillStyle>,
+    {
         self.current_state.stroke_paint = new_stroke_style.into().into_paint();
     }
 
@@ -344,9 +355,11 @@ impl CanvasRenderingContext2D {
 
         let mut outline = path.into_outline();
         if !self.current_state.line_dash.is_empty() {
-            let mut dash = OutlineDash::new(&outline,
-                                            &self.current_state.line_dash,
-                                            self.current_state.line_dash_offset);
+            let mut dash = OutlineDash::new(
+                &outline,
+                &self.current_state.line_dash,
+                self.current_state.line_dash_offset,
+            );
             dash.dash();
             outline = dash.into_outline();
         }
@@ -381,23 +394,29 @@ impl CanvasRenderingContext2D {
 
         let transform = self.current_state.transform;
         let clip_path = self.current_state.clip_path;
-        let blend_mode = self.current_state.global_composite_operation.to_blend_mode();
+        let blend_mode = self
+            .current_state
+            .global_composite_operation
+            .to_blend_mode();
 
         outline.transform(&transform);
 
         if !self.current_state.shadow_color.is_fully_transparent() {
             let mut outline = outline.clone();
-            outline.transform(&Transform2F::from_translation(self.current_state.shadow_offset));
+            outline.transform(&Transform2F::from_translation(
+                self.current_state.shadow_offset,
+            ));
 
-            let shadow_blur_info =
-                push_shadow_blur_render_targets_if_needed(&mut self.canvas.scene,
-                                                          &self.current_state,
-                                                          outline.bounds());
+            let shadow_blur_info = push_shadow_blur_render_targets_if_needed(
+                &mut self.canvas.scene,
+                &self.current_state,
+                outline.bounds(),
+            );
 
             if let Some(ref shadow_blur_info) = shadow_blur_info {
-                outline.transform(&Transform2F::from_translation(-shadow_blur_info.bounds
-                                                                                  .origin()
-                                                                                  .to_f32()));
+                outline.transform(&Transform2F::from_translation(
+                    -shadow_blur_info.bounds.origin().to_f32(),
+                ));
             }
 
             // Per spec the shadow must respect the alpha of the shadowed path, but otherwise have
@@ -420,9 +439,11 @@ impl CanvasRenderingContext2D {
             path.set_blend_mode(blend_mode);
             self.canvas.scene.push_draw_path(path);
 
-            composite_shadow_blur_render_targets_if_needed(&mut self.canvas.scene,
-                                                           shadow_blur_info,
-                                                           clip_path);
+            composite_shadow_blur_render_targets_if_needed(
+                &mut self.canvas.scene,
+                shadow_blur_info,
+                clip_path,
+            );
         }
 
         let mut path = DrawPath::new(outline, paint_id);
@@ -431,10 +452,11 @@ impl CanvasRenderingContext2D {
         path.set_blend_mode(blend_mode);
         self.canvas.scene.push_draw_path(path);
 
-        fn push_shadow_blur_render_targets_if_needed(scene: &mut Scene,
-                                                     current_state: &State,
-                                                     outline_bounds: RectF)
-                                                    -> Option<ShadowBlurRenderTargetInfo> {
+        fn push_shadow_blur_render_targets_if_needed(
+            scene: &mut Scene,
+            current_state: &State,
+            outline_bounds: RectF,
+        ) -> Option<ShadowBlurRenderTargetInfo> {
             if current_state.shadow_blur == 0.0 {
                 return None;
             }
@@ -455,9 +477,11 @@ impl CanvasRenderingContext2D {
             })
         }
 
-        fn composite_shadow_blur_render_targets_if_needed(scene: &mut Scene,
-                                                          info: Option<ShadowBlurRenderTargetInfo>,
-                                                          clip_path: Option<ClipPathId>) {
+        fn composite_shadow_blur_render_targets_if_needed(
+            scene: &mut Scene,
+            info: Option<ShadowBlurRenderTargetInfo>,
+            clip_path: Option<ClipPathId>,
+        ) {
             let info = match info {
                 None => return,
                 Some(info) => info,
@@ -468,15 +492,21 @@ impl CanvasRenderingContext2D {
             paint_y.apply_transform(Transform2F::from_translation(info.bounds.origin().to_f32()));
 
             let sigma = info.sigma;
-            paint_x.set_filter(Some(PatternFilter::Blur { direction: BlurDirection::X, sigma }));
-            paint_y.set_filter(Some(PatternFilter::Blur { direction: BlurDirection::Y, sigma }));
+            paint_x.set_filter(Some(PatternFilter::Blur {
+                direction: BlurDirection::X,
+                sigma,
+            }));
+            paint_y.set_filter(Some(PatternFilter::Blur {
+                direction: BlurDirection::Y,
+                sigma,
+            }));
 
             let paint_id_x = scene.push_paint(&Paint::from_pattern(paint_x));
             let paint_id_y = scene.push_paint(&Paint::from_pattern(paint_y));
 
             // TODO(pcwalton): Apply clip as necessary.
-            let outline_x = Outline::from_rect(RectF::new(vec2f(0.0, 0.0),
-                                                        info.bounds.size().to_f32()));
+            let outline_x =
+                Outline::from_rect(RectF::new(vec2f(0.0, 0.0), info.bounds.size().to_f32()));
             let path_x = DrawPath::new(outline_x, paint_id_x);
             let outline_y = Outline::from_rect(info.bounds.to_f32());
             let mut path_y = DrawPath::new(outline_y, paint_id_y);
@@ -487,7 +517,6 @@ impl CanvasRenderingContext2D {
             scene.pop_render_target();
             scene.push_draw_path(path_y);
         }
-
     }
 
     // Transformations
@@ -498,7 +527,10 @@ impl CanvasRenderingContext2D {
     }
 
     #[inline]
-    pub fn scale<S>(&mut self, scale: S) where S: IntoVector2F {
+    pub fn scale<S>(&mut self, scale: S)
+    where
+        S: IntoVector2F,
+    {
         self.current_state.transform *= Transform2F::from_scale(scale)
     }
 
@@ -548,14 +580,20 @@ impl CanvasRenderingContext2D {
 
     #[inline]
     pub fn draw_image<I, L>(&mut self, image: I, dest_location: L)
-                            where I: CanvasImageSource, L: CanvasImageDestLocation {
+    where
+        I: CanvasImageSource,
+        L: CanvasImageDestLocation,
+    {
         let pattern = image.to_pattern(self, Transform2F::default());
         let src_rect = RectF::new(vec2f(0.0, 0.0), pattern.size().to_f32());
         self.draw_subimage(pattern, src_rect, dest_location)
     }
 
     pub fn draw_subimage<I, L>(&mut self, image: I, src_location: RectF, dest_location: L)
-                               where I: CanvasImageSource, L: CanvasImageDestLocation {
+    where
+        I: CanvasImageSource,
+        L: CanvasImageDestLocation,
+    {
         let dest_size = dest_location.size().unwrap_or(src_location.size());
         let scale = dest_size / src_location.size();
         let offset = dest_location.origin() - src_location.origin() * scale;
@@ -571,7 +609,9 @@ impl CanvasRenderingContext2D {
     // Pixel manipulation
 
     pub fn put_image_data<L>(&mut self, image_data: ImageData, dest_location: L)
-                             where L: CanvasImageDestLocation {
+    where
+        L: CanvasImageDestLocation,
+    {
         let origin = dest_location.origin();
         let size = dest_location.size().unwrap_or(image_data.size.to_f32());
         let pattern = Pattern::from_image(image_data.into_image());
@@ -618,8 +658,11 @@ impl CanvasRenderingContext2D {
 
     // Extensions
 
-    pub fn create_pattern_from_canvas(&mut self, canvas: Canvas, transform: Transform2F)
-                                      -> Pattern {
+    pub fn create_pattern_from_canvas(
+        &mut self,
+        canvas: Canvas,
+        transform: Transform2F,
+    ) -> Pattern {
         let subscene_size = canvas.size();
         let subscene = canvas.into_scene();
         let render_target = RenderTarget::new(subscene_size, String::new());
@@ -732,12 +775,18 @@ pub struct Path2D {
 impl Path2D {
     #[inline]
     pub fn new() -> Path2D {
-        Path2D { outline: Outline::new(), current_contour: Contour::new() }
+        Path2D {
+            outline: Outline::new(),
+            current_contour: Contour::new(),
+        }
     }
 
     #[inline]
     pub fn from_outline(outline: Outline) -> Path2D {
-        Path2D { outline, current_contour: Contour::new() }
+        Path2D {
+            outline,
+            current_contour: Contour::new(),
+        }
     }
 
     #[inline]
@@ -767,14 +816,17 @@ impl Path2D {
     }
 
     #[inline]
-    pub fn arc(&mut self,
-               center: Vector2F,
-               radius: f32,
-               start_angle: f32,
-               end_angle: f32,
-               direction: ArcDirection) {
+    pub fn arc(
+        &mut self,
+        center: Vector2F,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        direction: ArcDirection,
+    ) {
         let transform = Transform2F::from_scale(radius).translate(center);
-        self.current_contour.push_arc(&transform, start_angle, end_angle, direction);
+        self.current_contour
+            .push_arc(&transform, start_angle, end_angle, direction);
     }
 
     #[inline]
@@ -788,10 +840,11 @@ impl Path2D {
         let center = ctrl + bisector * (hypot / bisector.length());
 
         let transform = Transform2F::from_scale(radius).translate(center);
-        let chord = LineSegment2F::new(vu0.yx() * vec2f(-1.0,  1.0), vu1.yx() * vec2f( 1.0, -1.0));
+        let chord = LineSegment2F::new(vu0.yx() * vec2f(-1.0, 1.0), vu1.yx() * vec2f(1.0, -1.0));
 
         // FIXME(pcwalton): Is clockwise direction correct?
-        self.current_contour.push_arc_from_unit_chord(&transform, chord, ArcDirection::CW);
+        self.current_contour
+            .push_arc_from_unit_chord(&transform, chord, ArcDirection::CW);
     }
 
     pub fn rect(&mut self, rect: RectF) {
@@ -803,17 +856,23 @@ impl Path2D {
         self.current_contour.close();
     }
 
-    pub fn ellipse<A>(&mut self,
-                      center: Vector2F,
-                      axes: A,
-                      rotation: f32,
-                      start_angle: f32,
-                      end_angle: f32)
-                      where A: IntoVector2F {
+    pub fn ellipse<A>(
+        &mut self,
+        center: Vector2F,
+        axes: A,
+        rotation: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) where
+        A: IntoVector2F,
+    {
         self.flush_current_contour();
 
-        let transform = Transform2F::from_scale(axes).rotate(rotation).translate(center);
-        self.current_contour.push_arc(&transform, start_angle, end_angle, ArcDirection::CW);
+        let transform = Transform2F::from_scale(axes)
+            .rotate(rotation)
+            .translate(center);
+        self.current_contour
+            .push_arc(&transform, start_angle, end_angle, ArcDirection::CW);
 
         if end_angle - start_angle >= 2.0 * PI {
             self.current_contour.close();
@@ -844,7 +903,8 @@ impl Path2D {
 
     fn flush_current_contour(&mut self) {
         if !self.current_contour.is_empty() {
-            self.outline.push_contour(mem::replace(&mut self.current_contour, Contour::new()));
+            self.outline
+                .push_contour(mem::replace(&mut self.current_contour, Contour::new()));
         }
     }
 }
@@ -966,8 +1026,11 @@ pub enum ImageSmoothingQuality {
 }
 
 pub trait CanvasImageSource {
-    fn to_pattern(self, dest_context: &mut CanvasRenderingContext2D, transform: Transform2F)
-                  -> Pattern;
+    fn to_pattern(
+        self,
+        dest_context: &mut CanvasRenderingContext2D,
+        transform: Transform2F,
+    ) -> Pattern;
 }
 
 pub trait CanvasImageDestLocation {
@@ -985,8 +1048,11 @@ impl CanvasImageSource for Pattern {
 
 impl CanvasImageSource for Canvas {
     #[inline]
-    fn to_pattern(self, dest_context: &mut CanvasRenderingContext2D, transform: Transform2F)
-                  -> Pattern {
+    fn to_pattern(
+        self,
+        dest_context: &mut CanvasRenderingContext2D,
+        transform: Transform2F,
+    ) -> Pattern {
         dest_context.create_pattern_from_canvas(self, transform)
     }
 }
@@ -1021,7 +1087,10 @@ pub struct ImageData {
 impl ImageData {
     #[inline]
     pub fn new(size: Vector2I) -> ImageData {
-        ImageData { data: vec![ColorU::transparent_black(); size.area() as usize], size }
+        ImageData {
+            data: vec![ColorU::transparent_black(); size.area() as usize],
+            size,
+        }
     }
 
     #[inline]

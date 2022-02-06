@@ -19,7 +19,7 @@ use font_kit::source::{Source, SystemSource};
 use font_kit::sources::mem::MemSource;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::util;
-use pathfinder_geometry::vector::{Vector2F, vec2f};
+use pathfinder_geometry::vector::{vec2f, Vector2F};
 use pathfinder_renderer::paint::PaintId;
 use pathfinder_text::{FontContext, FontRenderOptions, TextRenderMode};
 use skribo::{FontCollection, FontFamily, FontRef, Layout as SkriboLayout, TextStyle};
@@ -35,8 +35,13 @@ impl CanvasRenderingContext2D {
     /// fill the text that you passed into `measure_text()` with the layout-related style
     /// properties set at the time you called that function. This allows Pathfinder to skip having
     /// to lay out the text again.
-    pub fn fill_text<T>(&mut self, text: &T, position: Vector2F) where T: ToTextLayout + ?Sized {
-        let paint = self.current_state.resolve_paint(&self.current_state.fill_paint);
+    pub fn fill_text<T>(&mut self, text: &T, position: Vector2F)
+    where
+        T: ToTextLayout + ?Sized,
+    {
+        let paint = self
+            .current_state
+            .resolve_paint(&self.current_state.fill_paint);
         let paint_id = self.canvas.scene.push_paint(&paint);
         self.fill_or_stroke_text(text, position, paint_id, TextRenderMode::Fill);
     }
@@ -47,8 +52,13 @@ impl CanvasRenderingContext2D {
     /// stroke the text that you passed into `measure_text()` with the layout-related style
     /// properties set at the time you called that function. This allows Pathfinder to skip having
     /// to lay out the text again.
-    pub fn stroke_text<T>(&mut self, text: &T, position: Vector2F) where T: ToTextLayout + ?Sized {
-        let paint = self.current_state.resolve_paint(&self.current_state.stroke_paint);
+    pub fn stroke_text<T>(&mut self, text: &T, position: Vector2F)
+    where
+        T: ToTextLayout + ?Sized,
+    {
+        let paint = self
+            .current_state
+            .resolve_paint(&self.current_state.stroke_paint);
         let paint_id = self.canvas.scene.push_paint(&paint);
         let render_mode = TextRenderMode::Stroke(self.current_state.resolve_stroke_style());
         self.fill_or_stroke_text(text, position, paint_id, render_mode);
@@ -59,40 +69,55 @@ impl CanvasRenderingContext2D {
     /// As an extension, the returned `TextMetrics` object contains all the layout data for the
     /// string and can be used in its place when calling `fill_text()` and `stroke_text()` to avoid
     /// needlessly performing layout multiple times.
-    pub fn measure_text<T>(&self, text: &T) -> TextMetrics where T: ToTextLayout + ?Sized {
+    pub fn measure_text<T>(&self, text: &T) -> TextMetrics
+    where
+        T: ToTextLayout + ?Sized,
+    {
         text.layout(CanvasState(&self.current_state)).into_owned()
     }
 
-    fn fill_or_stroke_text<T>(&mut self,
-                              text: &T,
-                              mut position: Vector2F,
-                              paint_id: PaintId,
-                              render_mode: TextRenderMode)
-                              where T: ToTextLayout + ?Sized {
+    fn fill_or_stroke_text<T>(
+        &mut self,
+        text: &T,
+        mut position: Vector2F,
+        paint_id: PaintId,
+        render_mode: TextRenderMode,
+    ) where
+        T: ToTextLayout + ?Sized,
+    {
         let layout = text.layout(CanvasState(&self.current_state));
 
         let clip_path = self.current_state.clip_path;
-        let blend_mode = self.current_state.global_composite_operation.to_blend_mode();
+        let blend_mode = self
+            .current_state
+            .global_composite_operation
+            .to_blend_mode();
 
         position += layout.text_origin();
         let transform = self.current_state.transform * Transform2F::from_translation(position);
 
         // TODO(pcwalton): Report errors.
-        drop(self.canvas_font_context
-                 .0
-                 .borrow_mut()
-                 .font_context
-                 .push_layout(&mut self.canvas.scene,
-                              &layout.skribo_layout,
-                              &TextStyle { size: layout.font_size },
-                              &FontRenderOptions {
-                                  transform,
-                                  render_mode,
-                                  hinting_options: HintingOptions::None,
-                                  clip_path,
-                                  blend_mode,
-                                  paint_id,
-                              }));
+        drop(
+            self.canvas_font_context
+                .0
+                .borrow_mut()
+                .font_context
+                .push_layout(
+                    &mut self.canvas.scene,
+                    &layout.skribo_layout,
+                    &TextStyle {
+                        size: layout.font_size,
+                    },
+                    &FontRenderOptions {
+                        transform,
+                        render_mode,
+                        hinting_options: HintingOptions::None,
+                        clip_path,
+                        blend_mode,
+                        paint_id,
+                    },
+                ),
+        );
     }
 
     // Text styles
@@ -103,9 +128,12 @@ impl CanvasRenderingContext2D {
     }
 
     #[inline]
-    pub fn set_font<FC>(&mut self, font_collection: FC) where FC: IntoFontCollection {
+    pub fn set_font<FC>(&mut self, font_collection: FC)
+    where
+        FC: IntoFontCollection,
+    {
         let font_collection = font_collection.into_font_collection(&self.canvas_font_context);
-        self.current_state.font_collection = font_collection; 
+        self.current_state.font_collection = font_collection;
     }
 
     #[inline]
@@ -152,13 +180,19 @@ pub trait ToTextLayout {
 
 impl ToTextLayout for str {
     fn layout(&self, state: CanvasState) -> Cow<TextMetrics> {
-        let skribo_layout = Rc::new(skribo::layout(&TextStyle { size: state.0.font_size },
-                                                   &state.0.font_collection,
-                                                   self));
-        Cow::Owned(TextMetrics::new(skribo_layout,
-                                    state.0.font_size,
-                                    state.0.text_align,
-                                    state.0.text_baseline))
+        let skribo_layout = Rc::new(skribo::layout(
+            &TextStyle {
+                size: state.0.font_size,
+            },
+            &state.0.font_collection,
+            self,
+        ));
+        Cow::Owned(TextMetrics::new(
+            skribo_layout,
+            state.0.font_size,
+            state.0.text_align,
+            state.0.text_baseline,
+        ))
     }
 }
 
@@ -171,10 +205,12 @@ impl ToTextLayout for String {
 
 impl ToTextLayout for Rc<SkriboLayout> {
     fn layout(&self, state: CanvasState) -> Cow<TextMetrics> {
-        Cow::Owned(TextMetrics::new((*self).clone(),
-                                    state.0.font_size,
-                                    state.0.text_align,
-                                    state.0.text_baseline))
+        Cow::Owned(TextMetrics::new(
+            (*self).clone(),
+            state.0.font_size,
+            state.0.text_align,
+            state.0.text_baseline,
+        ))
     }
 }
 
@@ -199,8 +235,9 @@ pub(super) struct CanvasFontContextData {
 impl CanvasFontContext {
     pub fn new(font_source: Arc<dyn Source>) -> CanvasFontContext {
         let mut default_font_collection = FontCollection::new();
-        if let Ok(default_font) = font_source.select_best_match(&[FamilyName::SansSerif],
-                                                                &Properties::new()) {
+        if let Ok(default_font) =
+            font_source.select_best_match(&[FamilyName::SansSerif], &Properties::new())
+        {
             if let Ok(default_font) = default_font.load() {
                 default_font_collection.add_family(FontFamily::new_from_font(default_font));
             }
@@ -220,7 +257,10 @@ impl CanvasFontContext {
     }
 
     /// A convenience method to create a font context with a set of in-memory fonts.
-    pub fn from_fonts<I>(fonts: I) -> CanvasFontContext where I: Iterator<Item = Handle> {
+    pub fn from_fonts<I>(fonts: I) -> CanvasFontContext
+    where
+        I: Iterator<Item = Handle>,
+    {
         CanvasFontContext::new(Arc::new(MemSource::from_fonts(fonts).unwrap()))
     }
 
@@ -295,11 +335,12 @@ struct VerticalMetrics {
 }
 
 impl TextMetrics {
-    pub fn new(skribo_layout: Rc<SkriboLayout>,
-               font_size: f32,
-               align: TextAlign,
-               baseline: TextBaseline)
-               -> TextMetrics {
+    pub fn new(
+        skribo_layout: Rc<SkriboLayout>,
+        font_size: f32,
+        align: TextAlign,
+        baseline: TextBaseline,
+    ) -> TextMetrics {
         TextMetrics {
             skribo_layout,
             font_size,
@@ -332,11 +373,11 @@ impl TextMetrics {
             self.text_y_offset.set(Some(match self.baseline {
                 TextBaseline::Alphabetic => 0.0,
                 TextBaseline::Top => vertical_metrics.em_height_ascent,
-                TextBaseline::Middle => {
-                    util::lerp(vertical_metrics.em_height_ascent,
-                               vertical_metrics.em_height_descent,
-                               0.5)
-                }
+                TextBaseline::Middle => util::lerp(
+                    vertical_metrics.em_height_ascent,
+                    vertical_metrics.em_height_descent,
+                    0.5,
+                ),
                 TextBaseline::Bottom => vertical_metrics.em_height_descent,
                 TextBaseline::Ideographic => vertical_metrics.ideographic_baseline,
                 TextBaseline::Hanging => vertical_metrics.hanging_baseline,
@@ -358,39 +399,56 @@ impl TextMetrics {
                     let font_metrics = last_glyph.font.font.metrics();
                     let scale_factor = self.skribo_layout.size / font_metrics.units_per_em as f32;
                     let glyph_rect = last_glyph.font.font.typographic_bounds(glyph_id).unwrap();
-                    self.width.set(Some(last_glyph.offset.x() +
-                                        glyph_rect.max_x() * scale_factor));
+                    self.width.set(Some(
+                        last_glyph.offset.x() + glyph_rect.max_x() * scale_factor,
+                    ));
                 }
             }
-
         }
         self.width.get().unwrap()
     }
 
     fn populate_vertical_metrics_if_necessary(&self) {
         if self.vertical_metrics.get().is_none() {
-            self.vertical_metrics.set(Some(VerticalMetrics::measure(&self.skribo_layout)));
+            self.vertical_metrics
+                .set(Some(VerticalMetrics::measure(&self.skribo_layout)));
         }
     }
 
     pub fn font_bounding_box_ascent(&self) -> f32 {
         self.populate_vertical_metrics_if_necessary();
-        self.vertical_metrics.get().unwrap().font_bounding_box_ascent - self.text_y_offset()
+        self.vertical_metrics
+            .get()
+            .unwrap()
+            .font_bounding_box_ascent
+            - self.text_y_offset()
     }
 
     pub fn font_bounding_box_descent(&self) -> f32 {
         self.populate_vertical_metrics_if_necessary();
-        self.vertical_metrics.get().unwrap().font_bounding_box_descent - self.text_y_offset()
+        self.vertical_metrics
+            .get()
+            .unwrap()
+            .font_bounding_box_descent
+            - self.text_y_offset()
     }
 
     pub fn actual_bounding_box_ascent(&self) -> f32 {
         self.populate_vertical_metrics_if_necessary();
-        self.vertical_metrics.get().unwrap().actual_bounding_box_ascent - self.text_y_offset()
+        self.vertical_metrics
+            .get()
+            .unwrap()
+            .actual_bounding_box_ascent
+            - self.text_y_offset()
     }
 
     pub fn actual_bounding_box_descent(&self) -> f32 {
         self.populate_vertical_metrics_if_necessary();
-        self.vertical_metrics.get().unwrap().actual_bounding_box_descent - self.text_y_offset()
+        self.vertical_metrics
+            .get()
+            .unwrap()
+            .actual_bounding_box_descent
+            - self.text_y_offset()
     }
 
     pub fn em_height_ascent(&self) -> f32 {
@@ -411,14 +469,20 @@ impl TextMetrics {
                     let glyph_id = first_glyph.glyph_id;
                     let font_metrics = first_glyph.font.font.metrics();
                     let scale_factor = self.skribo_layout.size / font_metrics.units_per_em as f32;
-                    let glyph_rect = first_glyph.font.font.raster_bounds(
-                        glyph_id,
-                        font_metrics.units_per_em as f32,
-                        Transform2F::default(),
-                        HintingOptions::None,
-                        RasterizationOptions::GrayscaleAa).unwrap();
-                    self.actual_left_extent.set(Some(first_glyph.offset.x() +
-                                                     glyph_rect.min_x() as f32 * scale_factor));
+                    let glyph_rect = first_glyph
+                        .font
+                        .font
+                        .raster_bounds(
+                            glyph_id,
+                            font_metrics.units_per_em as f32,
+                            Transform2F::default(),
+                            HintingOptions::None,
+                            RasterizationOptions::GrayscaleAa,
+                        )
+                        .unwrap();
+                    self.actual_left_extent.set(Some(
+                        first_glyph.offset.x() + glyph_rect.min_x() as f32 * scale_factor,
+                    ));
                 }
             }
         }
@@ -433,14 +497,20 @@ impl TextMetrics {
                     let glyph_id = last_glyph.glyph_id;
                     let font_metrics = last_glyph.font.font.metrics();
                     let scale_factor = self.skribo_layout.size / font_metrics.units_per_em as f32;
-                    let glyph_rect = last_glyph.font.font.raster_bounds(
-                        glyph_id,
-                        font_metrics.units_per_em as f32,
-                        Transform2F::default(),
-                        HintingOptions::None,
-                        RasterizationOptions::GrayscaleAa).unwrap();
-                    self.actual_right_extent.set(Some(last_glyph.offset.x() +
-                                                      glyph_rect.max_x() as f32 * scale_factor));
+                    let glyph_rect = last_glyph
+                        .font
+                        .font
+                        .raster_bounds(
+                            glyph_id,
+                            font_metrics.units_per_em as f32,
+                            Transform2F::default(),
+                            HintingOptions::None,
+                            RasterizationOptions::GrayscaleAa,
+                        )
+                        .unwrap();
+                    self.actual_right_extent.set(Some(
+                        last_glyph.offset.x() + glyph_rect.max_x() as f32 * scale_factor,
+                    ));
                 }
             }
         }
@@ -461,7 +531,6 @@ impl TextMetrics {
         self.populate_vertical_metrics_if_necessary();
         self.vertical_metrics.get().unwrap().ideographic_baseline - self.text_y_offset()
     }
-
 }
 
 impl VerticalMetrics {
@@ -488,28 +557,30 @@ impl VerticalMetrics {
                     let font_metrics = font.metrics();
                     let scale_factor = skribo_layout.size / font_metrics.units_per_em as f32;
                     vertical_metrics.em_height_ascent =
-                        (font_metrics.ascent *
-                         scale_factor).max(vertical_metrics.em_height_ascent);
-                    vertical_metrics.em_height_descent =
-                        (font_metrics.descent *
-                         scale_factor).min(vertical_metrics.em_height_descent);
-                    vertical_metrics.font_bounding_box_ascent =
-                        (font_metrics.bounding_box.max_y() *
-                         scale_factor).max(vertical_metrics.font_bounding_box_ascent);
+                        (font_metrics.ascent * scale_factor).max(vertical_metrics.em_height_ascent);
+                    vertical_metrics.em_height_descent = (font_metrics.descent * scale_factor)
+                        .min(vertical_metrics.em_height_descent);
+                    vertical_metrics.font_bounding_box_ascent = (font_metrics.bounding_box.max_y()
+                        * scale_factor)
+                        .max(vertical_metrics.font_bounding_box_ascent);
                     vertical_metrics.font_bounding_box_descent =
-                        (font_metrics.bounding_box.min_y() *
-                         scale_factor).min(vertical_metrics.font_bounding_box_descent);
+                        (font_metrics.bounding_box.min_y() * scale_factor)
+                            .min(vertical_metrics.font_bounding_box_descent);
 
                     last_font = Some(font);
                 }
             }
 
             let font = last_font.as_ref().unwrap();
-            let glyph_rect = font.raster_bounds(glyph.glyph_id,
-                                                skribo_layout.size,
-                                                Transform2F::default(),
-                                                HintingOptions::None,
-                                                RasterizationOptions::GrayscaleAa).unwrap();
+            let glyph_rect = font
+                .raster_bounds(
+                    glyph.glyph_id,
+                    skribo_layout.size,
+                    Transform2F::default(),
+                    HintingOptions::None,
+                    RasterizationOptions::GrayscaleAa,
+                )
+                .unwrap();
             vertical_metrics.actual_bounding_box_ascent =
                 (glyph_rect.max_y() as f32).max(vertical_metrics.actual_bounding_box_ascent);
             vertical_metrics.actual_bounding_box_descent =
@@ -574,7 +645,9 @@ impl<'a> IntoFontCollection for &'a [Font] {
 impl<'a> IntoFontCollection for &'a str {
     #[inline]
     fn into_font_collection(self, context: &CanvasFontContext) -> Arc<FontCollection> {
-        context.get_font_by_postscript_name(self).into_font_collection(context)
+        context
+            .get_font_by_postscript_name(self)
+            .into_font_collection(context)
     }
 }
 

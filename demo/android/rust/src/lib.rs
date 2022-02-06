@@ -13,12 +13,12 @@ extern crate lazy_static;
 
 use jni::objects::{GlobalRef, JByteBuffer, JClass, JObject, JString, JValue};
 use jni::{JNIEnv, JavaVM};
-use pathfinder_demo::window::{Event, DataPath, View, Window, WindowSize};
+use pathfinder_demo::window::{DataPath, Event, View, Window, WindowSize};
 use pathfinder_demo::DemoApp;
 use pathfinder_demo::Options;
-use pathfinder_geometry::vector::{Vector2I, vec2i};
 use pathfinder_geometry::rect::RectI;
-use pathfinder_gl::{GLVersion, GLDevice};
+use pathfinder_geometry::vector::{vec2i, Vector2I};
+use pathfinder_gl::{GLDevice, GLVersion};
 use pathfinder_resources::ResourceLoader;
 use std::cell::RefCell;
 use std::io::Error as IOError;
@@ -131,7 +131,10 @@ pub unsafe extern "system" fn Java_graphics_pathfinder_pathfinderdemo_Pathfinder
     x: i32,
     y: i32,
 ) {
-    EVENT_QUEUE.lock().unwrap().push(Event::MouseDown(vec2i(x, y)))
+    EVENT_QUEUE
+        .lock()
+        .unwrap()
+        .push(Event::MouseDown(vec2i(x, y)))
 }
 
 #[no_mangle]
@@ -141,7 +144,10 @@ pub unsafe extern "system" fn Java_graphics_pathfinder_pathfinderdemo_Pathfinder
     x: i32,
     y: i32,
 ) {
-    EVENT_QUEUE.lock().unwrap().push(Event::MouseDragged(vec2i(x, y)))
+    EVENT_QUEUE
+        .lock()
+        .unwrap()
+        .push(Event::MouseDragged(vec2i(x, y)))
 }
 
 #[no_mangle]
@@ -152,7 +158,10 @@ pub unsafe extern "system" fn Java_graphics_pathfinder_pathfinderdemo_Pathfinder
     center_x: i32,
     center_y: i32,
 ) {
-    EVENT_QUEUE.lock().unwrap().push(Event::Zoom(factor, vec2i(center_x, center_y)))
+    EVENT_QUEUE
+        .lock()
+        .unwrap()
+        .push(Event::Zoom(factor, vec2i(center_x, center_y)))
 }
 
 #[no_mangle]

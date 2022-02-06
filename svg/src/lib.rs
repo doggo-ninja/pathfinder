@@ -25,7 +25,7 @@ use pathfinder_content::transform::Transform2FPathIter;
 use pathfinder_geometry::line_segment::LineSegment2F;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::transform2d::Transform2F;
-use pathfinder_geometry::vector::{Vector2F, vec2f};
+use pathfinder_geometry::vector::{vec2f, Vector2F};
 use pathfinder_renderer::paint::Paint;
 use pathfinder_renderer::scene::{ClipPath, ClipPathId, DrawPath, Scene};
 use pathfinder_simd::default::F32x2;
@@ -80,7 +80,9 @@ impl SVGScene {
         let root = &tree.root();
         match *root.borrow() {
             NodeKind::Svg(ref svg) => {
-                built_svg.scene.set_view_box(usvg_rect_to_euclid_rect(&svg.view_box.rect));
+                built_svg
+                    .scene
+                    .set_view_box(usvg_rect_to_euclid_rect(&svg.view_box.rect));
                 for kid in root.children() {
                     built_svg.process_node(&kid, &State::new(), &mut None);
                 }
@@ -91,24 +93,24 @@ impl SVGScene {
         built_svg
     }
 
-    fn process_node(&mut self,
-                    node: &Node,
-                    state: &State,
-                    clip_outline: &mut Option<Outline>) {
+    fn process_node(&mut self, node: &Node, state: &State, clip_outline: &mut Option<Outline>) {
         let mut state = (*state).clone();
         let node_transform = usvg_transform_to_transform_2d(&node.transform());
         state.transform = state.transform * node_transform;
         match *node.borrow() {
             NodeKind::Group(ref group) => {
                 if !group.filter.is_empty() {
-                    self.result_flags.insert(BuildResultFlags::UNSUPPORTED_FILTER_ATTR);
+                    self.result_flags
+                        .insert(BuildResultFlags::UNSUPPORTED_FILTER_ATTR);
                 }
                 if group.mask.is_some() {
-                    self.result_flags.insert(BuildResultFlags::UNSUPPORTED_MASK_ATTR);
+                    self.result_flags
+                        .insert(BuildResultFlags::UNSUPPORTED_MASK_ATTR);
                 }
                 if let Some(ref clip_path_name) = group.clip_path {
                     if let Some(clip_outline) = self.clip_paths.get(clip_path_name) {
-                        let transformed_outline = clip_outline.clone().transformed(&state.transform);
+                        let transformed_outline =
+                            clip_outline.clone().transformed(&state.transform);
                         let mut clip_path = ClipPath::new(transformed_outline);
                         clip_path.set_clip_path(state.clip_path);
                         clip_path.set_name(format!("ClipPath({})", clip_path_name));
@@ -126,31 +128,38 @@ impl SVGScene {
                 let path = UsvgPathToSegments::new(path.data.iter().cloned());
                 let path = Transform2FPathIter::new(path, &state.transform);
                 if clip_outline.is_some() {
-                    self.result_flags.insert(BuildResultFlags::UNSUPPORTED_MULTIPLE_CLIP_PATHS);
+                    self.result_flags
+                        .insert(BuildResultFlags::UNSUPPORTED_MULTIPLE_CLIP_PATHS);
                 }
                 *clip_outline = Some(Outline::from_segments(path));
             }
-            NodeKind::Path(ref path) if state.path_destination == PathDestination::Draw &&
-                    path.visibility == Visibility::Visible => {
+            NodeKind::Path(ref path)
+                if state.path_destination == PathDestination::Draw
+                    && path.visibility == Visibility::Visible =>
+            {
                 if let Some(ref fill) = path.fill {
                     let path = UsvgPathToSegments::new(path.data.iter().cloned());
                     let outline = Outline::from_segments(path);
 
                     let name = format!("Fill({})", node.id());
-                    self.push_draw_path(outline,
-                                        name,
-                                        &state,
-                                        &fill.paint,
-                                        fill.opacity,
-                                        fill.rule);
+                    self.push_draw_path(
+                        outline,
+                        name,
+                        &state,
+                        &fill.paint,
+                        fill.opacity,
+                        fill.rule,
+                    );
                 }
 
                 if let Some(ref stroke) = path.stroke {
                     let stroke_style = StrokeStyle {
                         line_width: f32::max(stroke.width.value() as f32, HAIRLINE_STROKE_WIDTH),
                         line_cap: LineCap::from_usvg_line_cap(stroke.linecap),
-                        line_join: LineJoin::from_usvg_line_join(stroke.linejoin,
-                                                                 stroke.miterlimit.value() as f32),
+                        line_join: LineJoin::from_usvg_line_join(
+                            stroke.linejoin,
+                            stroke.miterlimit.value() as f32,
+                        ),
                     };
 
                     let path = UsvgPathToSegments::new(path.data.iter().cloned());
@@ -168,12 +177,14 @@ impl SVGScene {
                     let outline = stroke_to_fill.into_outline();
 
                     let name = format!("Stroke({})", node.id());
-                    self.push_draw_path(outline,
-                                        name,
-                                        &state,
-                                        &stroke.paint,
-                                        stroke.opacity,
-                                        UsvgFillRule::NonZero);
+                    self.push_draw_path(
+                        outline,
+                        name,
+                        &state,
+                        &stroke.paint,
+                        stroke.opacity,
+                        UsvgFillRule::NonZero,
+                    );
                 }
             }
             NodeKind::Path(..) => {}
@@ -184,7 +195,8 @@ impl SVGScene {
                     self.process_node(&kid, &state, &mut clip_outline);
                 }
 
-                self.clip_paths.insert(node.id().to_owned(), clip_outline.unwrap());
+                self.clip_paths
+                    .insert(node.id().to_owned(), clip_outline.unwrap());
             }
             NodeKind::Defs => {
                 // FIXME(pcwalton): This is wrong.
@@ -195,20 +207,24 @@ impl SVGScene {
             }
             NodeKind::LinearGradient(ref svg_linear_gradient) => {
                 let from = vec2f(svg_linear_gradient.x1 as f32, svg_linear_gradient.y1 as f32);
-                let to   = vec2f(svg_linear_gradient.x2 as f32, svg_linear_gradient.y2 as f32);
+                let to = vec2f(svg_linear_gradient.x2 as f32, svg_linear_gradient.y2 as f32);
                 let gradient = Gradient::linear_from_points(from, to);
-                self.add_gradient(gradient,
-                                  svg_linear_gradient.id.clone(),
-                                  &svg_linear_gradient.base)
+                self.add_gradient(
+                    gradient,
+                    svg_linear_gradient.id.clone(),
+                    &svg_linear_gradient.base,
+                )
             }
             NodeKind::RadialGradient(ref svg_radial_gradient) => {
                 let from = vec2f(svg_radial_gradient.fx as f32, svg_radial_gradient.fy as f32);
-                let to   = vec2f(svg_radial_gradient.cx as f32, svg_radial_gradient.cy as f32);
+                let to = vec2f(svg_radial_gradient.cx as f32, svg_radial_gradient.cy as f32);
                 let radii = F32x2::new(0.0, svg_radial_gradient.r.value() as f32);
                 let gradient = Gradient::radial(LineSegment2F::new(from, to), radii);
-                self.add_gradient(gradient,
-                                  svg_radial_gradient.id.clone(),
-                                  &svg_radial_gradient.base)
+                self.add_gradient(
+                    gradient,
+                    svg_radial_gradient.id.clone(),
+                    &svg_radial_gradient.base,
+                )
             }
             NodeKind::Filter(..) => {
                 self.result_flags
@@ -230,10 +246,12 @@ impl SVGScene {
         }
     }
 
-    fn add_gradient(&mut self,
-                    mut gradient: Gradient,
-                    id: String,
-                    usvg_base_gradient: &BaseGradient) {
+    fn add_gradient(
+        &mut self,
+        mut gradient: Gradient,
+        id: String,
+        usvg_base_gradient: &BaseGradient,
+    ) {
         for stop in &usvg_base_gradient.stops {
             let mut stop = ColorStop::from_usvg_stop(stop);
             if usvg_base_gradient.spread_method == SpreadMethod::Reflect {
@@ -261,22 +279,32 @@ impl SVGScene {
         let transform = usvg_transform_to_transform_2d(&usvg_base_gradient.transform);
 
         // TODO(pcwalton): What should we do with `gradientUnits`?
-        self.gradients.insert(id, GradientInfo { gradient, transform });
+        self.gradients.insert(
+            id,
+            GradientInfo {
+                gradient,
+                transform,
+            },
+        );
     }
 
-    fn push_draw_path(&mut self,
-                      mut outline: Outline,
-                      name: String,
-                      state: &State,
-                      paint: &UsvgPaint,
-                      opacity: Opacity,
-                      fill_rule: UsvgFillRule) {
+    fn push_draw_path(
+        &mut self,
+        mut outline: Outline,
+        name: String,
+        state: &State,
+        paint: &UsvgPaint,
+        opacity: Opacity,
+        fill_rule: UsvgFillRule,
+    ) {
         outline.transform(&state.transform);
-        let paint = Paint::from_svg_paint(paint,
-                                          &state.transform,
-                                          opacity,
-                                          &self.gradients,
-                                          &mut self.result_flags);
+        let paint = Paint::from_svg_paint(
+            paint,
+            &state.transform,
+            opacity,
+            &self.gradients,
+            &mut self.result_flags,
+        );
         let style = self.scene.push_paint(&paint);
         let fill_rule = FillRule::from_usvg_fill_rule(fill_rule);
         let mut path = DrawPath::new(outline, style);
@@ -323,22 +351,24 @@ impl Display for BuildResultFlags {
 }
 
 trait PaintExt {
-    fn from_svg_paint(svg_paint: &UsvgPaint,
-                      transform: &Transform2F,
-                      opacity: Opacity,
-                      gradients: &HashMap<String, GradientInfo>,
-                      result_flags: &mut BuildResultFlags)
-                      -> Self;
+    fn from_svg_paint(
+        svg_paint: &UsvgPaint,
+        transform: &Transform2F,
+        opacity: Opacity,
+        gradients: &HashMap<String, GradientInfo>,
+        result_flags: &mut BuildResultFlags,
+    ) -> Self;
 }
 
 impl PaintExt for Paint {
     #[inline]
-    fn from_svg_paint(svg_paint: &UsvgPaint,
-                      transform: &Transform2F,
-                      opacity: Opacity,
-                      gradients: &HashMap<String, GradientInfo>,
-                      result_flags: &mut BuildResultFlags)
-                      -> Paint {
+    fn from_svg_paint(
+        svg_paint: &UsvgPaint,
+        transform: &Transform2F,
+        opacity: Opacity,
+        gradients: &HashMap<String, GradientInfo>,
+        result_flags: &mut BuildResultFlags,
+    ) -> Paint {
         let mut paint;
         match *svg_paint {
             UsvgPaint::Color(color) => paint = Paint::from_color(ColorU::from_svg_color(color)),
@@ -366,13 +396,21 @@ impl PaintExt for Paint {
 }
 
 fn usvg_rect_to_euclid_rect(rect: &UsvgRect) -> RectF {
-    RectF::new(vec2f(rect.x() as f32, rect.y() as f32),
-               vec2f(rect.width() as f32, rect.height() as f32))
+    RectF::new(
+        vec2f(rect.x() as f32, rect.y() as f32),
+        vec2f(rect.width() as f32, rect.height() as f32),
+    )
 }
 
 fn usvg_transform_to_transform_2d(transform: &UsvgTransform) -> Transform2F {
-    Transform2F::row_major(transform.a as f32, transform.c as f32, transform.e as f32,
-                           transform.b as f32, transform.d as f32, transform.f as f32)
+    Transform2F::row_major(
+        transform.a as f32,
+        transform.c as f32,
+        transform.e as f32,
+        transform.b as f32,
+        transform.d as f32,
+        transform.f as f32,
+    )
 }
 
 struct UsvgPathToSegments<I>
@@ -435,8 +473,10 @@ where
                 let ctrl0 = vec2f(x1 as f32, y1 as f32);
                 let ctrl1 = vec2f(x2 as f32, y2 as f32);
                 let to = vec2f(x as f32, y as f32);
-                let mut segment = Segment::cubic(LineSegment2F::new(self.last_subpath_point, to),
-                                                 LineSegment2F::new(ctrl0, ctrl1));
+                let mut segment = Segment::cubic(
+                    LineSegment2F::new(self.last_subpath_point, to),
+                    LineSegment2F::new(ctrl0, ctrl1),
+                );
                 if self.just_moved {
                     segment.flags.insert(SegmentFlags::FIRST_IN_SUBPATH);
                 }
@@ -465,7 +505,12 @@ trait ColorUExt {
 impl ColorUExt for ColorU {
     #[inline]
     fn from_svg_color(svg_color: SvgColor) -> ColorU {
-        ColorU { r: svg_color.red, g: svg_color.green, b: svg_color.blue, a: !0 }
+        ColorU {
+            r: svg_color.red,
+            g: svg_color.green,
+            b: svg_color.blue,
+            a: !0,
+        }
     }
 }
 

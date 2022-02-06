@@ -33,7 +33,9 @@ pub trait Window {
     #[cfg(any(not(target_os = "macos"), feature = "pf-gl"))]
     fn gl_version(&self) -> GLVersion;
     #[cfg(any(not(target_os = "macos"), feature = "pf-gl"))]
-    fn gl_default_framebuffer(&self) -> GLuint { 0 }
+    fn gl_default_framebuffer(&self) -> GLuint {
+        0
+    }
     #[cfg(any(not(target_os = "macos"), feature = "pf-gl"))]
     fn present(&mut self, device: &mut GLDevice);
 

@@ -127,13 +127,13 @@ impl ColorF {
         let c = (1.0 - f32::abs(2.0 * l - 1.0)) * s;
         let xc = F32x4::new(c * (1.0 - f32::abs(h % 2.0 - 1.0)), c, 0.0, a);
         let rgba = match f32::ceil(h) as i32 {
-            1     => xc.yxzw(),
-            2     => xc.xyzw(),
-            3     => xc.zyxw(),
-            4     => xc.zxyw(),
-            5     => xc.xzyw(),
+            1 => xc.yxzw(),
+            2 => xc.xyzw(),
+            3 => xc.zyxw(),
+            4 => xc.zxyw(),
+            5 => xc.xzyw(),
             0 | 6 => xc.yzxw(),
-            _     => xc.zzzw(),
+            _ => xc.zzzw(),
         };
         let m = l - 0.5 * c;
         ColorF(rgba + F32x4::new(m, m, m, 0.0))
@@ -162,7 +162,12 @@ impl ColorF {
     #[inline]
     pub fn to_u8(&self) -> ColorU {
         let color = (self.0 * F32x4::splat(255.0)).to_i32x4();
-        ColorU { r: color[0] as u8, g: color[1] as u8, b: color[2] as u8, a: color[3] as u8 }
+        ColorU {
+            r: color[0] as u8,
+            g: color[1] as u8,
+            b: color[2] as u8,
+            a: color[3] as u8,
+        }
     }
 
     #[inline]
@@ -226,9 +231,7 @@ impl Debug for ColorF {
 
 #[inline]
 pub fn color_slice_to_u8_slice(slice: &[ColorU]) -> &[u8] {
-    unsafe {
-        slice::from_raw_parts(slice.as_ptr() as *const u8, slice.len() * 4)
-    }
+    unsafe { slice::from_raw_parts(slice.as_ptr() as *const u8, slice.len() * 4) }
 }
 
 #[inline]

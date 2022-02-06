@@ -20,10 +20,10 @@ use crate::camera::Camera;
 use crate::concurrent::DemoExecutor;
 use crate::device::{GroundProgram, GroundVertexArray};
 use crate::ui::{DemoUIModel, DemoUIPresenter, ScreenshotInfo, ScreenshotType, UIAction};
-use crate::window::{Event, Keycode, DataPath, Window, WindowSize};
+use crate::window::{DataPath, Event, Keycode, Window, WindowSize};
 use clap::{App, Arg};
-use pathfinder_content::effects::DEFRINGING_KERNEL_CORE_GRAPHICS;
 use pathfinder_content::effects::PatternFilter;
+use pathfinder_content::effects::DEFRINGING_KERNEL_CORE_GRAPHICS;
 use pathfinder_content::effects::STEM_DARKENING_FACTORS;
 use pathfinder_content::outline::Outline;
 use pathfinder_content::pattern::Pattern;
@@ -32,7 +32,7 @@ use pathfinder_export::{Export, FileFormat};
 use pathfinder_geometry::rect::{RectF, RectI};
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::transform3d::Transform4F;
-use pathfinder_geometry::vector::{Vector2F, Vector2I, Vector4F, vec2f, vec2i};
+use pathfinder_geometry::vector::{vec2f, vec2i, Vector2F, Vector2I, Vector4F};
 use pathfinder_gpu::Device;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererLevel};
@@ -44,14 +44,14 @@ use pathfinder_renderer::scene::{DrawPath, RenderTarget, Scene};
 use pathfinder_resources::ResourceLoader;
 use pathfinder_svg::SVGScene;
 use pathfinder_ui::{MousePosition, UIEvent};
+use pdf::file::File as PdfFile;
+use pdf_render::Cache as PdfRenderCache;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use usvg::{Options as UsvgOptions, Tree as SvgTree};
-use pdf::file::File as PdfFile;
-use pdf_render::Cache as PdfRenderCache;
 
 #[cfg(any(not(target_os = "macos"), feature = "pf-gl"))]
 use pathfinder_gl::GLDevice as DeviceImpl;
@@ -88,11 +88,14 @@ enum Content {
     Pdf {
         file: PdfFile<Vec<u8>>,
         cache: PdfRenderCache,
-        page_nr: u32
-    }
+        page_nr: u32,
+    },
 }
 
-pub struct DemoApp<W> where W: Window {
+pub struct DemoApp<W>
+where
+    W: Window,
+{
     pub window: W,
     pub should_exit: bool,
     pub options: Options,
@@ -126,7 +129,10 @@ pub struct DemoApp<W> where W: Window {
     ground_vertex_array: GroundVertexArray<DeviceImpl>,
 }
 
-impl<W> DemoApp<W> where W: Window {
+impl<W> DemoApp<W>
+where
+    W: Window,
+{
     pub fn new(window: W, window_size: WindowSize, options: Options) -> DemoApp<W> {
         let expire_message_event_id = window.create_user_event_id();
 
@@ -172,17 +178,18 @@ impl<W> DemoApp<W> where W: Window {
 
         let renderer = Renderer::new(device, resources, render_mode, render_options);
 
-        let scene_metadata = SceneMetadata::new_clipping_view_box(&mut scene,
-                                                                  viewport.size());
+        let scene_metadata = SceneMetadata::new_clipping_view_box(&mut scene, viewport.size());
         let camera = Camera::new(options.mode, scene_metadata.view_box, viewport.size());
 
         let scene_proxy = SceneProxy::from_scene(scene, level, executor);
 
         let ground_program = GroundProgram::new(renderer.device(), resources);
-        let ground_vertex_array = GroundVertexArray::new(renderer.device(),
-                                                         &ground_program,
-                                                         &renderer.quad_vertex_positions_buffer(),
-                                                         &renderer.quad_vertex_indices_buffer());
+        let ground_vertex_array = GroundVertexArray::new(
+            renderer.device(),
+            &ground_program,
+            &renderer.quad_vertex_positions_buffer(),
+            &renderer.quad_vertex_indices_buffer(),
+        );
 
         let mut message_epoch = 0;
         emit_message::<W>(
@@ -260,9 +267,9 @@ impl<W> DemoApp<W> where W: Window {
                 if modelview_transform.offset(*velocity) {
                     self.dirty = true;
                 }
-                let perspective = scene_transform.perspective *
-                    scene_transform.modelview_to_eye *
-                    modelview_transform.to_transform();
+                let perspective = scene_transform.perspective
+                    * scene_transform.modelview_to_eye
+                    * modelview_transform.to_transform();
                 Some(RenderTransform::Perspective(perspective))
             }
             Camera::TwoD(transform) => Some(RenderTransform::Transform2D(transform)),
@@ -281,7 +288,7 @@ impl<W> DemoApp<W> where W: Window {
 
         self.scene_proxy.build(build_options);
         /*
-        self.render_command_stream =    
+        self.render_command_stream =
             Some(self.scene_proxy.build_with_stream(build_options, self.renderer.gpu_features()));
             */
     }
@@ -299,8 +306,8 @@ impl<W> DemoApp<W> where W: Window {
                 Event::WindowResized(new_size) => {
                     self.window_size = new_size;
                     let viewport = self.window.viewport(self.ui_model.mode.view(0));
-                    self.scene_proxy.set_view_box(RectF::new(Vector2F::zero(),
-                                                             viewport.size().to_f32()));
+                    self.scene_proxy
+                        .set_view_box(RectF::new(Vector2F::zero(), viewport.size().to_f32()));
                     self.renderer.options_mut().dest =
                         DestFramebuffer::full_window(self.window_size.device_size());
                     self.renderer.dest_framebuffer_size_changed();
@@ -312,7 +319,11 @@ impl<W> DemoApp<W> where W: Window {
                 }
                 Event::MouseMoved(new_position) if self.mouselook_enabled => {
                     let mouse_position = self.process_mouse_position(new_position);
-                    if let Camera::ThreeD { ref mut modelview_transform, .. } = self.camera {
+                    if let Camera::ThreeD {
+                        ref mut modelview_transform,
+                        ..
+                    } = self.camera
+                    {
                         let rotation = mouse_position.relative.to_f32() * MOUSELOOK_ROTATION_SPEED;
                         modelview_transform.yaw += rotation.x();
                         modelview_transform.pitch += rotation.y();
@@ -329,13 +340,18 @@ impl<W> DemoApp<W> where W: Window {
                         let backing_scale_factor = self.window_size.backing_scale_factor;
                         let position = position.to_f32() * backing_scale_factor;
                         let scale_delta = 1.0 + d_dist * CAMERA_SCALE_SPEED_2D;
-                        *transform = transform.translate(-position)
-                                              .scale(scale_delta)
-                                              .translate(position);
+                        *transform = transform
+                            .translate(-position)
+                            .scale(scale_delta)
+                            .translate(position);
                     }
                 }
                 Event::Look { pitch, yaw } => {
-                    if let Camera::ThreeD { ref mut modelview_transform, .. } = self.camera {
+                    if let Camera::ThreeD {
+                        ref mut modelview_transform,
+                        ..
+                    } = self.camera
+                    {
                         modelview_transform.pitch += pitch;
                         modelview_transform.yaw += yaw;
                     }
@@ -352,21 +368,20 @@ impl<W> DemoApp<W> where W: Window {
                         *scene_transform = eye_transforms[0];
                         for (index, eye_transform) in eye_transforms.iter().enumerate().skip(1) {
                             let weight = 1.0 / (index + 1) as f32;
-                            scene_transform.perspective.transform =
-                                scene_transform.perspective
-                                               .transform
-                                               .lerp(weight, &eye_transform.perspective.transform);
-                            scene_transform.modelview_to_eye =
-                                scene_transform.modelview_to_eye
-                                               .lerp(weight, &eye_transform.modelview_to_eye);
-                         }
+                            scene_transform.perspective.transform = scene_transform
+                                .perspective
+                                .transform
+                                .lerp(weight, &eye_transform.perspective.transform);
+                            scene_transform.modelview_to_eye = scene_transform
+                                .modelview_to_eye
+                                .lerp(weight, &eye_transform.modelview_to_eye);
+                        }
                         // TODO: calculate the eye offset from the eye transforms?
-                        let z_offset = -DEFAULT_EYE_OFFSET *
-                            scene_transform.perspective.transform.c0.x();
+                        let z_offset =
+                            -DEFAULT_EYE_OFFSET * scene_transform.perspective.transform.c0.x();
                         let z_offset = Vector4F::new(0.0, 0.0, z_offset, 1.0);
-                        scene_transform.modelview_to_eye =
-                            Transform4F::from_translation(z_offset) *
-                            scene_transform.modelview_to_eye;
+                        scene_transform.modelview_to_eye = Transform4F::from_translation(z_offset)
+                            * scene_transform.modelview_to_eye;
                     }
                 }
                 Event::KeyDown(Keycode::Alphanumeric(b'w')) => {
@@ -452,9 +467,11 @@ impl<W> DemoApp<W> where W: Window {
                     let viewport_size = self.window.viewport(self.ui_model.mode.view(0)).size();
                     self.scene_metadata =
                         SceneMetadata::new_clipping_view_box(&mut scene, viewport_size);
-                    self.camera = Camera::new(self.ui_model.mode,
-                                              self.scene_metadata.view_box,
-                                              viewport_size);
+                    self.camera = Camera::new(
+                        self.ui_model.mode,
+                        self.scene_metadata.view_box,
+                        viewport_size,
+                    );
 
                     self.scene_proxy.replace_scene(scene);
 
@@ -498,19 +515,28 @@ impl<W> DemoApp<W> where W: Window {
                 .push(*ui_event);
         }
 
-        self.renderer.debug_ui_presenter_mut().debug_ui_presenter.ui_presenter.mouse_position =
+        self.renderer
+            .debug_ui_presenter_mut()
+            .debug_ui_presenter
+            .ui_presenter
+            .mouse_position =
             self.last_mouse_position.to_f32() * self.window_size.backing_scale_factor;
 
         let mut ui_action = UIAction::None;
         if self.options.ui == UIVisibility::All {
-            let DebugUIPresenterInfo { device, allocator, debug_ui_presenter } =
-                self.renderer.debug_ui_presenter_mut();
-            self.ui_presenter.update(device,
-                                     allocator,
-                                     &mut self.window,
-                                     debug_ui_presenter,
-                                     &mut ui_action,
-                                     &mut self.ui_model);
+            let DebugUIPresenterInfo {
+                device,
+                allocator,
+                debug_ui_presenter,
+            } = self.renderer.debug_ui_presenter_mut();
+            self.ui_presenter.update(
+                device,
+                allocator,
+                &mut self.window,
+                debug_ui_presenter,
+                &mut ui_action,
+                &mut self.ui_model,
+            );
         }
 
         self.handle_ui_events(frame, &mut ui_action);
@@ -524,24 +550,32 @@ impl<W> DemoApp<W> where W: Window {
     fn maybe_take_screenshot(&mut self) {
         match self.pending_screenshot_info.take() {
             None => {}
-            Some(ScreenshotInfo { kind: ScreenshotType::PNG, path }) => {
-                self.take_raster_screenshot(path)
-            }
-            Some(ScreenshotInfo { kind: ScreenshotType::SVG, path }) => {
+            Some(ScreenshotInfo {
+                kind: ScreenshotType::PNG,
+                path,
+            }) => self.take_raster_screenshot(path),
+            Some(ScreenshotInfo {
+                kind: ScreenshotType::SVG,
+                path,
+            }) => {
                 // FIXME(pcwalton): This won't work on Android.
                 let mut writer = BufWriter::new(File::create(path).unwrap());
-                self.scene_proxy.copy_scene().export(&mut writer, FileFormat::SVG).unwrap();
+                self.scene_proxy
+                    .copy_scene()
+                    .export(&mut writer, FileFormat::SVG)
+                    .unwrap();
             }
         }
     }
 
     fn handle_ui_events(&mut self, mut frame: Frame, ui_action: &mut UIAction) {
-        frame.ui_events = self.renderer
-                              .debug_ui_presenter_mut()
-                              .debug_ui_presenter
-                              .ui_presenter
-                              .event_queue
-                              .drain();
+        frame.ui_events = self
+            .renderer
+            .debug_ui_presenter_mut()
+            .debug_ui_presenter
+            .ui_presenter
+            .event_queue
+            .drain();
 
         self.handle_ui_action(ui_action);
 
@@ -550,9 +584,11 @@ impl<W> DemoApp<W> where W: Window {
         // FIXME(pcwalton): This should really be an MVC setup.
         if self.camera.mode() != self.ui_model.mode {
             let viewport_size = self.window.viewport(self.ui_model.mode.view(0)).size();
-            self.camera = Camera::new(self.ui_model.mode,
-                                      self.scene_metadata.view_box,
-                                      viewport_size);
+            self.camera = Camera::new(
+                self.ui_model.mode,
+                self.scene_metadata.view_box,
+                viewport_size,
+            );
         }
 
         for ui_event in frame.ui_events {
@@ -614,9 +650,10 @@ impl<W> DemoApp<W> where W: Window {
                 if let Camera::TwoD(ref mut transform) = self.camera {
                     let old_rotation = transform.rotation();
                     let center = center_of_window(&self.window_size);
-                    *transform = transform.translate(-center)
-                                          .rotate(*theta - old_rotation)
-                                          .translate(center);
+                    *transform = transform
+                        .translate(-center)
+                        .rotate(*theta - old_rotation)
+                        .translate(center);
                 }
             }
         }
@@ -695,7 +732,7 @@ impl Options {
                 Arg::with_name("high-performance-gpu")
                     .short("g")
                     .long("high-performance-gpu")
-                    .help("Use the high-performance (discrete) GPU, if available")
+                    .help("Use the high-performance (discrete) GPU, if available"),
             )
             .arg(
                 Arg::with_name("level")
@@ -703,7 +740,7 @@ impl Options {
                     .short("l")
                     .help("Set the renderer feature level as a Direct3D version equivalent")
                     .takes_value(true)
-                    .possible_values(&["9", "11"])
+                    .possible_values(&["9", "11"]),
             )
             .arg(
                 Arg::with_name("INPUT")
@@ -764,35 +801,47 @@ pub enum UIVisibility {
 }
 
 impl Content {
-    fn render(&mut self, viewport_size: Vector2I, filter: Option<PatternFilter>) -> (Scene, String) {
+    fn render(
+        &mut self,
+        viewport_size: Vector2I,
+        filter: Option<PatternFilter>,
+    ) -> (Scene, String) {
         match *self {
             Content::Svg(ref tree) => {
                 let built_svg = build_svg_tree(&tree, viewport_size, filter);
                 let message = get_svg_building_message(&built_svg);
                 (built_svg.scene, message)
             }
-            Content::Pdf { ref file, ref mut cache, page_nr } => {
+            Content::Pdf {
+                ref file,
+                ref mut cache,
+                page_nr,
+            } => {
                 let page = file.get_page(page_nr).expect("no such page");
-                let (scene, _) = cache.render_page(file, &page, Transform2F::default()).unwrap();
+                let (scene, _) = cache
+                    .render_page(file, &page, Transform2F::default())
+                    .unwrap();
                 (scene, String::new())
             }
         }
     }
 }
 
-fn load_scene(resource_loader: &dyn ResourceLoader,
-              input_path: &DataPath,)
-              -> Content {
+fn load_scene(resource_loader: &dyn ResourceLoader, input_path: &DataPath) -> Content {
     let data = match *input_path {
         DataPath::Default => resource_loader.slurp(DEFAULT_SVG_VIRTUAL_PATH).unwrap(),
         DataPath::Resource(ref name) => resource_loader.slurp(name).unwrap(),
-        DataPath::Path(ref path) => std::fs::read(path).unwrap().into()
+        DataPath::Path(ref path) => std::fs::read(path).unwrap().into(),
     };
 
     if let Ok(tree) = SvgTree::from_data(&data, &UsvgOptions::default().to_ref()) {
         Content::Svg(tree)
     } else if let Ok(file) = PdfFile::from_data(data) {
-        Content::Pdf { file, cache: PdfRenderCache::new(), page_nr: 0 }
+        Content::Pdf {
+            file,
+            cache: PdfRenderCache::new(),
+            page_nr: 0,
+        }
     } else {
         panic!("can't load data");
     }
@@ -800,22 +849,38 @@ fn load_scene(resource_loader: &dyn ResourceLoader,
 
 // FIXME(pcwalton): Rework how transforms work in the demo. The transform affects the final
 // composite steps, breaking this approach.
-fn build_svg_tree(tree: &SvgTree, viewport_size: Vector2I, filter: Option<PatternFilter>) -> SVGScene {
+fn build_svg_tree(
+    tree: &SvgTree,
+    viewport_size: Vector2I,
+    filter: Option<PatternFilter>,
+) -> SVGScene {
     let mut scene = Scene::new();
     let filter_info = filter.map(|filter| {
         let scale = match filter {
-            PatternFilter::Text { defringing_kernel: Some(_), .. } => vec2i(3, 1),
+            PatternFilter::Text {
+                defringing_kernel: Some(_),
+                ..
+            } => vec2i(3, 1),
             _ => vec2i(1, 1),
         };
         let name = "Text".to_owned();
         let render_target_size = viewport_size * scale;
         let render_target = RenderTarget::new(render_target_size, name);
         let render_target_id = scene.push_render_target(render_target);
-        FilterInfo { filter, render_target_id, render_target_size }
+        FilterInfo {
+            filter,
+            render_target_id,
+            render_target_size,
+        }
     });
 
     let mut built_svg = SVGScene::from_tree_and_scene(&tree, scene);
-    if let Some(FilterInfo { filter, render_target_id, render_target_size }) = filter_info {
+    if let Some(FilterInfo {
+        filter,
+        render_target_id,
+        render_target_size,
+    }) = filter_info
+    {
         let mut pattern = Pattern::from_render_target(render_target_id, render_target_size);
         pattern.set_filter(Some(filter));
         let paint_id = built_svg.scene.push_paint(&Paint::from_pattern(pattern));
@@ -878,7 +943,10 @@ struct Frame {
 
 impl Frame {
     fn new(transform: RenderTransform, ui_events: Vec<UIEvent>) -> Frame {
-        Frame { transform, ui_events }
+        Frame {
+            transform,
+            ui_events,
+        }
     }
 }
 
@@ -927,6 +995,6 @@ fn build_filter(ui_model: &DemoUIModel) -> Option<PatternFilter> {
             Some(DEFRINGING_KERNEL_CORE_GRAPHICS)
         } else {
             None
-        }
+        },
     })
 }

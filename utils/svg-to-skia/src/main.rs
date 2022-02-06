@@ -13,7 +13,11 @@ use usvg::{Node, NodeKind, Options, Paint, PathSegment, Tree};
 
 fn main() {
     let input_path = env::args().skip(1).next().unwrap();
-    let tree = Tree::from_data(&std::fs::read(&input_path).unwrap(), &Options::default().to_ref()).unwrap();
+    let tree = Tree::from_data(
+        &std::fs::read(&input_path).unwrap(),
+        &Options::default().to_ref(),
+    )
+    .unwrap();
 
     println!("#ifndef PAINT_H");
     println!("#define PAINT_H");
@@ -49,9 +53,18 @@ fn process_node(node: &Node) {
                 match segment {
                     PathSegment::MoveTo { x, y } => println!("    path.moveTo({}, {});", x, y),
                     PathSegment::LineTo { x, y } => println!("    path.lineTo({}, {});", x, y),
-                    PathSegment::CurveTo { x1, y1, x2, y2, x, y } => {
-                        println!("    path.cubicTo({}, {}, {}, {}, {}, {});",
-                                 x1, y1, x2, y2, x, y);
+                    PathSegment::CurveTo {
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        x,
+                        y,
+                    } => {
+                        println!(
+                            "    path.cubicTo({}, {}, {}, {}, {}, {});",
+                            x1, y1, x2, y2, x, y
+                        );
                     }
                     PathSegment::ClosePath => println!("    path.close();"),
                 }
@@ -78,10 +91,12 @@ fn process_node(node: &Node) {
 
 fn set_color(paint: &Paint) {
     if let Paint::Color(color) = *paint {
-        println!("    paint.setColor(0x{:x});",
-                ((color.red as u32) << 16) |
-                    ((color.green as u32) << 8) |
-                    ((color.blue as u32) << 0) |
-                    (0xff << 24));
+        println!(
+            "    paint.setColor(0x{:x});",
+            ((color.red as u32) << 16)
+                | ((color.green as u32) << 8)
+                | ((color.blue as u32) << 0)
+                | (0xff << 24)
+        );
     }
 }

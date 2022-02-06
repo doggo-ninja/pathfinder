@@ -8,16 +8,16 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::ops::Add;
 use pathfinder_color::{ColorF, ColorU};
 use pathfinder_content::fill::FillRule;
-use pathfinder_content::outline::{Outline, Contour};
+use pathfinder_content::outline::{Contour, Outline};
 use pathfinder_content::stroke::{OutlineStrokeToFill, StrokeStyle};
 use pathfinder_geometry::vector::vec2f;
 use pathfinder_renderer::scene::{DrawPath, Scene};
+use std::ops::Add;
 
 use swf_types::tags::SetBackgroundColor;
-use swf_types::{Tag, SRgb8, Movie};
+use swf_types::{Movie, SRgb8, Tag};
 
 use crate::shapes::{GraphicLayers, PaintOrLine};
 
@@ -51,7 +51,7 @@ impl Add for Twips {
 #[derive(Copy, Clone, Debug, PartialEq)]
 struct Point2<T> {
     x: T,
-    y: T
+    y: T,
 }
 
 impl Point2<Twips> {
@@ -66,7 +66,10 @@ impl Point2<Twips> {
 impl Add for Point2<Twips> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
-        Point2 { x: self.x + rhs.x, y: self.y + rhs.y }
+        Point2 {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
     }
 }
 
@@ -98,10 +101,10 @@ impl Stage {
             g: self.background_color.g,
             b: self.background_color.b,
             a: 255,
-        }.to_f32()
+        }
+        .to_f32()
     }
 }
-
 
 pub struct SymbolLibrary(Vec<Symbol>);
 
@@ -126,7 +129,7 @@ pub fn process_swf_tags(movie: &Movie) -> (SymbolLibrary, Stage) {
         background_color: SRgb8 {
             r: 255,
             g: 255,
-            b: 255
+            b: 255,
         },
         width: stage_width.as_f32() as i32,
         height: stage_height.as_f32() as i32,
@@ -136,14 +139,14 @@ pub fn process_swf_tags(movie: &Movie) -> (SymbolLibrary, Stage) {
         match tag {
             Tag::SetBackgroundColor(SetBackgroundColor { color }) => {
                 stage.background_color = *color;
-            },
+            }
             Tag::DefineShape(shape) => {
                 symbol_library.add_symbol(Symbol::Graphic(shapes::decode_shape(shape)));
                 // We will assume that symbol ids just go up, and are 1 based.
                 let symbol_id: SymbolId = shape.id;
                 debug_assert!(symbol_id as usize == symbol_library.0.len());
             }
-            _ => ()
+            _ => (),
         }
     }
     (symbol_library, stage)
@@ -166,12 +169,15 @@ pub fn draw_paths_into_scene(library: &SymbolLibrary, scene: &mut Scene) {
                         let Point2 { x, y } = segment.to.as_f32();
                         match segment.ctrl {
                             Some(ctrl) => {
-                                let Point2 { x: ctrl_x, y: ctrl_y } = ctrl.as_f32();
+                                let Point2 {
+                                    x: ctrl_x,
+                                    y: ctrl_y,
+                                } = ctrl.as_f32();
                                 contour.push_quadratic(vec2f(ctrl_x, ctrl_y), vec2f(x, y));
                             }
                             None => {
                                 contour.push_endpoint(vec2f(x, y));
-                            },
+                            }
                         }
                     }
                     if shape.is_closed() {
@@ -183,11 +189,14 @@ pub fn draw_paths_into_scene(library: &SymbolLibrary, scene: &mut Scene) {
                 }
 
                 if let PaintOrLine::Line(line) = style_layer.kind() {
-                    let mut stroke_to_fill = OutlineStrokeToFill::new(&path, StrokeStyle {
-                        line_width: line.width.as_f32(),
-                        line_cap: line.cap,
-                        line_join: line.join,
-                    });
+                    let mut stroke_to_fill = OutlineStrokeToFill::new(
+                        &path,
+                        StrokeStyle {
+                            line_width: line.width.as_f32(),
+                            line_cap: line.cap,
+                            line_join: line.join,
+                        },
+                    );
                     stroke_to_fill.offset();
                     path = stroke_to_fill.into_outline();
                 }

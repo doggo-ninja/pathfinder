@@ -21,7 +21,7 @@ use pathfinder_geometry::vector::{Vector2F, Vector4F};
 use pathfinder_content::clip::PolygonClipper3D;
 
 /// A sink for the render commands that scenes build.
-/// 
+///
 /// In single-threaded operation, this object typically buffers commands into an array and then,
 /// once scene building is complete, commands are all sent to the output at once. In multithreaded
 /// operation, on the other hand, commands are sent to the renderer on the fly as they're built.
@@ -128,9 +128,10 @@ impl RenderTransform {
         }
 
         let inverse_transform = perspective.transform.inverse();
-        let clip_polygon = points.into_iter()
-                                 .map(|point| (inverse_transform * point).to_2d())
-                                 .collect();
+        let clip_polygon = points
+            .into_iter()
+            .map(|point| (inverse_transform * point).to_2d())
+            .collect();
         return PreparedRenderTransform::Perspective {
             perspective,
             clip_polygon,
@@ -165,17 +166,13 @@ impl PreparedBuildOptions {
     pub(crate) fn to_prepare_mode(&self, renderer_level: RendererLevel) -> PrepareMode {
         match renderer_level {
             RendererLevel::D3D9 => PrepareMode::CPU,
-            RendererLevel::D3D11 => {
-                match self.transform {
-                    PreparedRenderTransform::Perspective { .. } => PrepareMode::TransformCPUBinGPU,
-                    PreparedRenderTransform::None => {
-                        PrepareMode::GPU { transform: Transform2F::default() }
-                    }
-                    PreparedRenderTransform::Transform2D(transform) => {
-                        PrepareMode::GPU { transform }
-                    }
-                }
-            }
+            RendererLevel::D3D11 => match self.transform {
+                PreparedRenderTransform::Perspective { .. } => PrepareMode::TransformCPUBinGPU,
+                PreparedRenderTransform::None => PrepareMode::GPU {
+                    transform: Transform2F::default(),
+                },
+                PreparedRenderTransform::Transform2D(transform) => PrepareMode::GPU { transform },
+            },
         }
     }
 }

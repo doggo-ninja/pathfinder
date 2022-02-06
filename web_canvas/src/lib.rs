@@ -23,8 +23,8 @@ use pathfinder_resources::embedded::EmbeddedResourceLoader;
 use pathfinder_webgl::WebGlDevice;
 use std::str::FromStr;
 use std::sync::Arc;
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{self, HtmlCanvasElement, WebGl2RenderingContext};
 
 #[wasm_bindgen]
@@ -45,11 +45,12 @@ struct WebCanvasState {
 
 #[wasm_bindgen(js_name = "createContext")]
 pub fn create_context(html_canvas: HtmlCanvasElement) -> PFCanvasRenderingContext2D {
-    let context = html_canvas.get_context("webgl2")
-                             .unwrap()
-                             .unwrap()
-                             .dyn_into::<WebGl2RenderingContext>()
-                             .unwrap();
+    let context = html_canvas
+        .get_context("webgl2")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<WebGl2RenderingContext>()
+        .unwrap();
 
     // Get the real size of the window, taking HiDPI into account.
     let framebuffer_size = vec2i(html_canvas.width() as i32, html_canvas.height() as i32);
@@ -89,15 +90,21 @@ impl PFCanvasRenderingContext2D {
     #[wasm_bindgen(js_name = "pfFlush")]
     pub fn pf_flush(&mut self) {
         // Update framebuffer size.
-        let framebuffer_size = vec2i(self.html_canvas.width() as i32,
-                                     self.html_canvas.height() as i32);
+        let framebuffer_size = vec2i(
+            self.html_canvas.width() as i32,
+            self.html_canvas.height() as i32,
+        );
         self.renderer.options_mut().dest = DestFramebuffer::full_window(framebuffer_size);
         self.renderer.options_mut().background_color = None;
         self.renderer.dest_framebuffer_size_changed();
 
         // TODO(pcwalton): This is inefficient!
         let mut scene = (*self.context.canvas_mut().scene()).clone();
-        scene.build_and_render(&mut self.renderer, BuildOptions::default(), SequentialExecutor);
+        scene.build_and_render(
+            &mut self.renderer,
+            BuildOptions::default(),
+            SequentialExecutor,
+        );
 
         self.context.canvas_mut().set_size(framebuffer_size);
     }
@@ -116,17 +123,20 @@ impl PFCanvasRenderingContext2D {
 
     #[wasm_bindgen(js_name = "clearRect")]
     pub fn clear_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
-        self.context.clear_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
+        self.context
+            .clear_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
     }
 
     #[wasm_bindgen(js_name = "fillRect")]
     pub fn fill_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
-        self.context.fill_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
+        self.context
+            .fill_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
     }
 
     #[wasm_bindgen(js_name = "strokeRect")]
     pub fn stroke_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
-        self.context.stroke_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
+        self.context
+            .stroke_rect(RectF::new(vec2f(x, y), vec2f(width, height)));
     }
 
     // TODO(pcwalton): Drawing text
@@ -219,12 +229,14 @@ impl PFCanvasRenderingContext2D {
 
     #[wasm_bindgen(js_name = "bezierCurveTo")]
     pub fn bezier_curve_to(&mut self, cp1x: f32, cp1y: f32, cp2x: f32, cp2y: f32, x: f32, y: f32) {
-        self.default_path.bezier_curve_to(vec2f(cp1x, cp1y), vec2f(cp2x, cp2y), vec2f(x, y))
+        self.default_path
+            .bezier_curve_to(vec2f(cp1x, cp1y), vec2f(cp2x, cp2y), vec2f(x, y))
     }
 
     #[wasm_bindgen(js_name = "quadraticCurveTo")]
     pub fn quadratic_curve_to(&mut self, cpx: f32, cpy: f32, x: f32, y: f32) {
-        self.default_path.quadratic_curve_to(vec2f(cpx, cpy), vec2f(x, y))
+        self.default_path
+            .quadratic_curve_to(vec2f(cpx, cpy), vec2f(x, y))
     }
 
     #[wasm_bindgen(js_name = "closePath")]
@@ -260,9 +272,11 @@ fn parse_fill_or_stroke_style(string: &str) -> Option<FillStyle> {
         Err(_) => return None,
         Ok(css_color) => css_color,
     };
-    let color = ColorU::new(css_color.r,
-                            css_color.g,
-                            css_color.b,
-                            (css_color.a * 255.0).round() as u8);
+    let color = ColorU::new(
+        css_color.r,
+        css_color.g,
+        css_color.b,
+        (css_color.a * 255.0).round() as u8,
+    );
     Some(FillStyle::Color(color))
 }

@@ -11,21 +11,21 @@
 //! Demonstrates how to use the Pathfinder canvas API with `glutin`.
 
 use glutin::dpi::PhysicalSize;
-use glutin::{ContextBuilder, GlProfile, GlRequest};
-use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use glutin::event_loop::{ControlFlow, EventLoop};
 use glutin::window::WindowBuilder;
+use glutin::{ContextBuilder, GlProfile, GlRequest};
 use pathfinder_canvas::{Canvas, CanvasFontContext, Path2D};
 use pathfinder_color::ColorF;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{vec2f, vec2i};
 use pathfinder_gl::{GLDevice, GLVersion};
-use pathfinder_resources::embedded::EmbeddedResourceLoader;
 use pathfinder_renderer::concurrent::rayon::RayonExecutor;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
-use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererMode, RendererOptions};
+use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::BuildOptions;
+use pathfinder_resources::embedded::EmbeddedResourceLoader;
 
 fn main() {
     // Calculate the right logical size of the window.
@@ -34,14 +34,16 @@ fn main() {
     let physical_window_size = PhysicalSize::new(window_size.x() as f64, window_size.y() as f64);
 
     // Open a window.
-    let window_builder = WindowBuilder::new().with_title("Minimal example")
-                                             .with_inner_size(physical_window_size);
+    let window_builder = WindowBuilder::new()
+        .with_title("Minimal example")
+        .with_inner_size(physical_window_size);
 
     // Create an OpenGL 3.x context for Pathfinder to use.
-    let gl_context = ContextBuilder::new().with_gl(GlRequest::Latest)
-                                          .with_gl_profile(GlProfile::Core)
-                                          .build_windowed(window_builder, &event_loop)
-                                          .unwrap();
+    let gl_context = ContextBuilder::new()
+        .with_gl(GlRequest::Latest)
+        .with_gl_profile(GlProfile::Core)
+        .build_windowed(window_builder, &event_loop)
+        .unwrap();
 
     // Load OpenGL, and make the context current.
     let gl_context = unsafe { gl_context.make_current().unwrap() };
@@ -79,28 +81,38 @@ fn main() {
     canvas.stroke_path(path);
 
     // Render the canvas to screen.
-    let mut scene = SceneProxy::from_scene(canvas.into_canvas().into_scene(),
-                                           renderer.mode().level,
-                                           RayonExecutor);
+    let mut scene = SceneProxy::from_scene(
+        canvas.into_canvas().into_scene(),
+        renderer.mode().level,
+        RayonExecutor,
+    );
     scene.build_and_render(&mut renderer, BuildOptions::default());
     gl_context.swap_buffers().unwrap();
 
     // Wait for a keypress.
     event_loop.run(move |event, _, control_flow| {
         match event {
-            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } |
             Event::WindowEvent {
-                event: WindowEvent::KeyboardInput {
-                    input: KeyboardInput { virtual_keycode: Some(VirtualKeyCode::Escape), .. },
-                    ..
-                },
+                event: WindowEvent::CloseRequested,
+                ..
+            }
+            | Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    },
                 ..
             } => {
                 *control_flow = ControlFlow::Exit;
-            },
+            }
             _ => {
                 *control_flow = ControlFlow::Wait;
-            },
+            }
         };
     })
 }

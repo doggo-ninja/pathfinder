@@ -307,7 +307,10 @@ pub struct ShapeKeyframeProperty {
 
 impl Lottie {
     #[inline]
-    pub fn from_reader<R>(reader: R) -> Result<Lottie, JSONError> where R: Read {
+    pub fn from_reader<R>(reader: R) -> Result<Lottie, JSONError>
+    where
+        R: Read,
+    {
         serde_json::from_reader(reader)
     }
 }

@@ -11,7 +11,7 @@
 use euclid::default::Size2D;
 use pathfinder_canvas::{Canvas, CanvasFontContext, CanvasRenderingContext2D, FillStyle, Path2D};
 use pathfinder_color::{ColorF, ColorU};
-use pathfinder_geometry::vector::{Vector2F, Vector2I, vec2f, vec2i};
+use pathfinder_geometry::vector::{vec2f, vec2i, Vector2F, Vector2I};
 use pathfinder_gl::{GLDevice, GLVersion};
 use pathfinder_renderer::concurrent::rayon::RayonExecutor;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
@@ -19,9 +19,11 @@ use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererMode, RendererO
 use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::BuildOptions;
 use pathfinder_resources::embedded::EmbeddedResourceLoader;
-use std::f32::consts::PI;
 use std::f32;
-use surfman::{Connection, ContextAttributeFlags, ContextAttributes, GLVersion as SurfmanGLVersion};
+use std::f32::consts::PI;
+use surfman::{
+    Connection, ContextAttributeFlags, ContextAttributes, GLVersion as SurfmanGLVersion,
+};
 use surfman::{SurfaceAccess, SurfaceType};
 use winit::dpi::LogicalSize;
 use winit::{Event, EventsLoop, WindowBuilder, WindowEvent};
@@ -43,16 +45,19 @@ fn main() {
     let mut event_loop = EventsLoop::new();
     let window_size = Size2D::new(1067, 800);
     let logical_size = LogicalSize::new(window_size.width as f64, window_size.height as f64);
-    let window = WindowBuilder::new().with_title("Moire example")
-                                     .with_dimensions(logical_size)
-                                     .build(&event_loop)
-                                     .unwrap();
+    let window = WindowBuilder::new()
+        .with_title("Moire example")
+        .with_dimensions(logical_size)
+        .build(&event_loop)
+        .unwrap();
     window.show();
 
     // Create a `surfman` device. On a multi-GPU system, we'll request the low-power integrated
     // GPU.
     let connection = Connection::from_winit_window(&window).unwrap();
-    let native_widget = connection.create_native_widget_from_winit_window(&window).unwrap();
+    let native_widget = connection
+        .create_native_widget_from_winit_window(&window)
+        .unwrap();
     let adapter = connection.create_low_power_adapter().unwrap();
     let mut device = connection.create_device(&adapter).unwrap();
 
@@ -61,14 +66,19 @@ fn main() {
         version: SurfmanGLVersion::new(3, 0),
         flags: ContextAttributeFlags::ALPHA,
     };
-    let context_descriptor = device.create_context_descriptor(&context_attributes).unwrap();
+    let context_descriptor = device
+        .create_context_descriptor(&context_attributes)
+        .unwrap();
 
     // Make the OpenGL context via `surfman`, and load OpenGL functions.
     let surface_type = SurfaceType::Widget { native_widget };
     let mut gl_context = device.create_context(&context_descriptor).unwrap();
-    let surface = device.create_surface(&gl_context, SurfaceAccess::GPUOnly, surface_type)
-                        .unwrap();
-    device.bind_surface_to_context(&mut gl_context, surface).unwrap();
+    let surface = device
+        .create_surface(&gl_context, SurfaceAccess::GPUOnly, surface_type)
+        .unwrap();
+    device
+        .bind_surface_to_context(&mut gl_context, surface)
+        .unwrap();
     device.make_context_current(&gl_context).unwrap();
     gl::load_with(|symbol_name| device.get_proc_address(&gl_context, symbol_name));
 
@@ -78,10 +88,11 @@ fn main() {
     let framebuffer_size = vec2i(physical_size.width as i32, physical_size.height as i32);
 
     // Create a Pathfinder GL device.
-    let default_framebuffer = device.context_surface_info(&gl_context)
-                                    .unwrap()
-                                    .unwrap()
-                                    .framebuffer_object;
+    let default_framebuffer = device
+        .context_surface_info(&gl_context)
+        .unwrap()
+        .unwrap()
+        .framebuffer_object;
     let pathfinder_device = GLDevice::new(GLVersion::GL3, default_framebuffer);
 
     // Create our renderers.
@@ -101,16 +112,27 @@ fn main() {
         moire_renderer.render();
 
         // Present the rendered canvas via `surfman`.
-        let mut surface = device.unbind_surface_from_context(&mut gl_context).unwrap().unwrap();
-        device.present_surface(&mut gl_context, &mut surface).unwrap();
-        device.bind_surface_to_context(&mut gl_context, surface).unwrap();
+        let mut surface = device
+            .unbind_surface_from_context(&mut gl_context)
+            .unwrap()
+            .unwrap();
+        device
+            .present_surface(&mut gl_context, &mut surface)
+            .unwrap();
+        device
+            .bind_surface_to_context(&mut gl_context, surface)
+            .unwrap();
 
-        event_loop.poll_events(|event| {
-            match event {
-                Event::WindowEvent { event: WindowEvent::CloseRequested, .. } |
-                Event::WindowEvent { event: WindowEvent::KeyboardInput { .. }, .. } => exit = true,
-                _ => {}
+        event_loop.poll_events(|event| match event {
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
             }
+            | Event::WindowEvent {
+                event: WindowEvent::KeyboardInput { .. },
+                ..
+            } => exit = true,
+            _ => {}
         });
     }
 }
@@ -127,8 +149,11 @@ struct MoireRenderer {
 }
 
 impl MoireRenderer {
-    fn new(renderer: Renderer<GLDevice>, window_size: Vector2I, drawable_size: Vector2I)
-           -> MoireRenderer {
+    fn new(
+        renderer: Renderer<GLDevice>,
+        window_size: Vector2I,
+        drawable_size: Vector2I,
+    ) -> MoireRenderer {
         let level = renderer.mode().level;
         MoireRenderer {
             renderer,
@@ -159,7 +184,7 @@ impl MoireRenderer {
         self.renderer.options_mut().background_color = Some(background_color);
 
         // Make a canvas.
-        let mut canvas =    
+        let mut canvas =
             Canvas::new(self.drawable_size.to_f32()).get_context_2d(self.font_context.clone());
         canvas.set_line_width(CIRCLE_THICKNESS * self.device_pixel_ratio);
         canvas.set_stroke_style(FillStyle::Color(foreground_color.to_u8()));
@@ -171,7 +196,8 @@ impl MoireRenderer {
 
         // Build and render scene.
         self.scene.replace_scene(canvas.into_canvas().into_scene());
-        self.scene.build_and_render(&mut self.renderer, BuildOptions::default());
+        self.scene
+            .build_and_render(&mut self.renderer, BuildOptions::default());
 
         self.frame += 1;
     }

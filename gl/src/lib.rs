@@ -22,7 +22,9 @@ use pathfinder_gpu::{BlendFactor, BlendOp, BufferData, BufferTarget, BufferUploa
 use pathfinder_gpu::{ComputeDimensions, ComputeState, DepthFunc, Device, FeatureLevel};
 use pathfinder_gpu::{ImageAccess, ImageBinding, Primitive, ProgramKind, RenderOptions};
 use pathfinder_gpu::{RenderState, RenderTarget, ShaderKind, StencilFunc, TextureBinding};
-use pathfinder_gpu::{TextureData, TextureDataRef, TextureFormat, TextureSamplingFlags, UniformData};
+use pathfinder_gpu::{
+    TextureData, TextureDataRef, TextureFormat, TextureSamplingFlags, UniformData,
+};
 use pathfinder_gpu::{VertexAttrClass, VertexAttrDescriptor, VertexAttrType};
 use pathfinder_resources::ResourceLoader;
 use pathfinder_simd::default::F32x4;
@@ -53,13 +55,18 @@ impl GLDevice {
             format: TextureFormat::RGBA8,
         };
 
-        let mut device = GLDevice { version, default_framebuffer, dummy_texture };
+        let mut device = GLDevice {
+            version,
+            default_framebuffer,
+            dummy_texture,
+        };
         let dummy_texture_data =
             [0; DUMMY_TEXTURE_LENGTH as usize * DUMMY_TEXTURE_LENGTH as usize * 4];
-        device.dummy_texture =
-            device.create_texture_from_data(TextureFormat::RGBA8,
-                                            Vector2I::splat(DUMMY_TEXTURE_LENGTH),
-                                            TextureDataRef::U8(&dummy_texture_data));
+        device.dummy_texture = device.create_texture_from_data(
+            TextureFormat::RGBA8,
+            Vector2I::splat(DUMMY_TEXTURE_LENGTH),
+            TextureDataRef::U8(&dummy_texture_data),
+        );
         device
     }
 
@@ -82,15 +89,20 @@ impl GLDevice {
         self.use_program(render_state.program);
         self.bind_vertex_array(render_state.vertex_array);
 
-        self.bind_textures_and_images(&render_state.program,
-                                      &render_state.textures,
-                                      &render_state.images);
+        self.bind_textures_and_images(
+            &render_state.program,
+            &render_state.textures,
+            &render_state.images,
+        );
 
         for &(storage_buffer, buffer) in render_state.storage_buffers {
             self.set_storage_buffer(storage_buffer, buffer);
         }
 
-        render_state.uniforms.iter().for_each(|(uniform, data)| self.set_uniform(uniform, data));
+        render_state
+            .uniforms
+            .iter()
+            .for_each(|(uniform, data)| self.set_uniform(uniform, data));
 
         self.set_render_options(&render_state.options);
     }
@@ -98,21 +110,28 @@ impl GLDevice {
     fn set_compute_state(&self, compute_state: &ComputeState<GLDevice>) {
         self.use_program(compute_state.program);
 
-        self.bind_textures_and_images(&compute_state.program,
-                                      &compute_state.textures,
-                                      &compute_state.images);
+        self.bind_textures_and_images(
+            &compute_state.program,
+            &compute_state.textures,
+            &compute_state.images,
+        );
 
-        compute_state.uniforms.iter().for_each(|(uniform, data)| self.set_uniform(uniform, data));
+        compute_state
+            .uniforms
+            .iter()
+            .for_each(|(uniform, data)| self.set_uniform(uniform, data));
 
         for &(storage_buffer, buffer) in compute_state.storage_buffers {
             self.set_storage_buffer(storage_buffer, buffer);
         }
     }
 
-    fn bind_textures_and_images(&self,
-                                program: &GLProgram,
-                                texture_bindings: &[TextureBinding<GLTextureParameter, GLTexture>],
-                                image_bindings: &[ImageBinding<GLImageParameter, GLTexture>]) {
+    fn bind_textures_and_images(
+        &self,
+        program: &GLProgram,
+        texture_bindings: &[TextureBinding<GLTextureParameter, GLTexture>],
+        image_bindings: &[ImageBinding<GLImageParameter, GLTexture>],
+    ) {
         let (mut textures_bound, mut images_bound) = (0, 0);
         for &(texture_parameter, texture) in texture_bindings {
             self.bind_texture(texture, texture_parameter.texture_unit);
@@ -129,19 +148,24 @@ impl GLDevice {
                 if (textures_bound & (1 << texture_unit as u64)) == 0 {
                     self.bind_texture(&self.dummy_texture, texture_unit as GLuint);
                 }
-                gl::Uniform1i(uniform.location, texture_unit as GLint); ck();
+                gl::Uniform1i(uniform.location, texture_unit as GLint);
+                ck();
             }
             for (image_unit, uniform) in parameters.images.iter().enumerate() {
                 if (images_bound & (1 << image_unit as u64)) == 0 {
-                    gl::BindImageTexture(image_unit as GLuint,
-                                         self.dummy_texture.gl_texture,
-                                         0,
-                                         gl::FALSE,
-                                         0,
-                                         gl::READ_ONLY,
-                                         gl::RGBA8 as GLenum); ck();
+                    gl::BindImageTexture(
+                        image_unit as GLuint,
+                        self.dummy_texture.gl_texture,
+                        0,
+                        gl::FALSE,
+                        0,
+                        gl::READ_ONLY,
+                        gl::RGBA8 as GLenum,
+                    );
+                    ck();
                 }
-                gl::Uniform1i(uniform.location, image_unit as GLint); ck();
+                gl::Uniform1i(uniform.location, image_unit as GLint);
+                ck();
             }
         }
     }
@@ -151,53 +175,70 @@ impl GLDevice {
             // Set blend.
             match render_options.blend {
                 None => {
-                    gl::Disable(gl::BLEND); ck();
+                    gl::Disable(gl::BLEND);
+                    ck();
                 }
                 Some(ref blend) => {
-                    gl::BlendFuncSeparate(blend.src_rgb_factor.to_gl_blend_factor(),
-                                          blend.dest_rgb_factor.to_gl_blend_factor(),
-                                          blend.src_alpha_factor.to_gl_blend_factor(),
-                                          blend.dest_alpha_factor.to_gl_blend_factor()); ck();
-                    gl::BlendEquation(blend.op.to_gl_blend_op()); ck();
-                    gl::Enable(gl::BLEND); ck();
+                    gl::BlendFuncSeparate(
+                        blend.src_rgb_factor.to_gl_blend_factor(),
+                        blend.dest_rgb_factor.to_gl_blend_factor(),
+                        blend.src_alpha_factor.to_gl_blend_factor(),
+                        blend.dest_alpha_factor.to_gl_blend_factor(),
+                    );
+                    ck();
+                    gl::BlendEquation(blend.op.to_gl_blend_op());
+                    ck();
+                    gl::Enable(gl::BLEND);
+                    ck();
                 }
             }
 
             // Set depth.
             match render_options.depth {
                 None => {
-                    gl::Disable(gl::DEPTH_TEST); ck();
+                    gl::Disable(gl::DEPTH_TEST);
+                    ck();
                 }
                 Some(ref state) => {
-                    gl::DepthFunc(state.func.to_gl_depth_func()); ck();
-                    gl::DepthMask(state.write as GLboolean); ck();
-                    gl::Enable(gl::DEPTH_TEST); ck();
+                    gl::DepthFunc(state.func.to_gl_depth_func());
+                    ck();
+                    gl::DepthMask(state.write as GLboolean);
+                    ck();
+                    gl::Enable(gl::DEPTH_TEST);
+                    ck();
                 }
             }
 
             // Set stencil.
             match render_options.stencil {
                 None => {
-                    gl::Disable(gl::STENCIL_TEST); ck();
+                    gl::Disable(gl::STENCIL_TEST);
+                    ck();
                 }
                 Some(ref state) => {
-                    gl::StencilFunc(state.func.to_gl_stencil_func(),
-                                    state.reference as GLint,
-                                    state.mask); ck();
+                    gl::StencilFunc(
+                        state.func.to_gl_stencil_func(),
+                        state.reference as GLint,
+                        state.mask,
+                    );
+                    ck();
                     let (pass_action, write_mask) = if state.write {
                         (gl::REPLACE, state.mask)
                     } else {
                         (gl::KEEP, 0)
                     };
-                    gl::StencilOp(gl::KEEP, gl::KEEP, pass_action); ck();
+                    gl::StencilOp(gl::KEEP, gl::KEEP, pass_action);
+                    ck();
                     gl::StencilMask(write_mask);
-                    gl::Enable(gl::STENCIL_TEST); ck();
+                    gl::Enable(gl::STENCIL_TEST);
+                    ck();
                 }
             }
 
             // Set color mask.
             let color_mask = render_options.color_mask as GLboolean;
-            gl::ColorMask(color_mask, color_mask, color_mask, color_mask); ck();
+            gl::ColorMask(color_mask, color_mask, color_mask, color_mask);
+            ck();
         }
     }
 
@@ -205,40 +246,51 @@ impl GLDevice {
         unsafe {
             match *data {
                 UniformData::Float(value) => {
-                    gl::Uniform1f(uniform.location, value); ck();
+                    gl::Uniform1f(uniform.location, value);
+                    ck();
                 }
                 UniformData::IVec2(value) => {
-                    gl::Uniform2i(uniform.location, value[0], value[1]); ck();
+                    gl::Uniform2i(uniform.location, value[0], value[1]);
+                    ck();
                 }
                 UniformData::IVec3(value) => {
-                    gl::Uniform3i(uniform.location, value[0], value[1], value[2]); ck();
+                    gl::Uniform3i(uniform.location, value[0], value[1], value[2]);
+                    ck();
                 }
                 UniformData::Int(value) => {
-                    gl::Uniform1i(uniform.location, value); ck();
+                    gl::Uniform1i(uniform.location, value);
+                    ck();
                 }
                 UniformData::Mat2(data) => {
                     assert_eq!(mem::size_of::<F32x4>(), 4 * 4);
-                    gl::UniformMatrix2fv(uniform.location,
-                                         1,
-                                         gl::FALSE,
-                                         &data as *const F32x4 as *const GLfloat);
+                    gl::UniformMatrix2fv(
+                        uniform.location,
+                        1,
+                        gl::FALSE,
+                        &data as *const F32x4 as *const GLfloat,
+                    );
                 }
                 UniformData::Mat4(data) => {
                     assert_eq!(mem::size_of::<[F32x4; 4]>(), 4 * 4 * 4);
                     let data_ptr: *const F32x4 = data.as_ptr();
-                    gl::UniformMatrix4fv(uniform.location,
-                                         1,
-                                         gl::FALSE,
-                                         data_ptr as *const GLfloat);
+                    gl::UniformMatrix4fv(
+                        uniform.location,
+                        1,
+                        gl::FALSE,
+                        data_ptr as *const GLfloat,
+                    );
                 }
                 UniformData::Vec2(data) => {
-                    gl::Uniform2f(uniform.location, data.x(), data.y()); ck();
+                    gl::Uniform2f(uniform.location, data.x(), data.y());
+                    ck();
                 }
                 UniformData::Vec3(data) => {
-                    gl::Uniform3f(uniform.location, data[0], data[1], data[2]); ck();
+                    gl::Uniform3f(uniform.location, data[0], data[1], data[2]);
+                    ck();
                 }
                 UniformData::Vec4(data) => {
-                    gl::Uniform4f(uniform.location, data.x(), data.y(), data.z(), data.w()); ck();
+                    gl::Uniform4f(uniform.location, data.x(), data.y(), data.z(), data.w());
+                    ck();
                 }
             }
         }
@@ -246,15 +298,21 @@ impl GLDevice {
 
     fn set_storage_buffer(&self, storage_buffer: &GLStorageBuffer, buffer: &GLBuffer) {
         unsafe {
-            gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER,
-                               storage_buffer.location as GLuint,
-                               buffer.object.gl_buffer);
+            gl::BindBufferBase(
+                gl::SHADER_STORAGE_BUFFER,
+                storage_buffer.location as GLuint,
+                buffer.object.gl_buffer,
+            );
         }
     }
 
     fn unset_storage_buffer(&self, storage_buffer: &GLStorageBuffer) {
         unsafe {
-            gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, storage_buffer.location as GLuint, 0);
+            gl::BindBufferBase(
+                gl::SHADER_STORAGE_BUFFER,
+                storage_buffer.location as GLuint,
+                0,
+            );
         }
     }
 
@@ -268,11 +326,13 @@ impl GLDevice {
         unsafe {
             for image_binding in render_state.images {
                 self.unbind_image(image_binding.0.image_unit);
-                gl::Uniform1i(image_binding.0.uniform.location, 0); ck();
+                gl::Uniform1i(image_binding.0.uniform.location, 0);
+                ck();
             }
             for texture_binding in render_state.textures {
                 self.unbind_texture(texture_binding.0.texture_unit);
-                gl::Uniform1i(texture_binding.0.uniform.location, 0); ck();
+                gl::Uniform1i(texture_binding.0.uniform.location, 0);
+                ck();
             }
         }
 
@@ -288,11 +348,13 @@ impl GLDevice {
         unsafe {
             for image_binding in compute_state.images {
                 self.unbind_image(image_binding.0.image_unit);
-                gl::Uniform1i(image_binding.0.uniform.location, 0); ck();
+                gl::Uniform1i(image_binding.0.uniform.location, 0);
+                ck();
             }
             for texture_binding in compute_state.textures {
                 self.unbind_texture(texture_binding.0.texture_unit);
-                gl::Uniform1i(texture_binding.0.uniform.location, 0); ck();
+                gl::Uniform1i(texture_binding.0.uniform.location, 0);
+                ck();
             }
         }
 
@@ -302,19 +364,24 @@ impl GLDevice {
     fn reset_render_options(&self, render_options: &RenderOptions) {
         unsafe {
             if render_options.blend.is_some() {
-                gl::Disable(gl::BLEND); ck();
+                gl::Disable(gl::BLEND);
+                ck();
             }
 
             if render_options.depth.is_some() {
-                gl::Disable(gl::DEPTH_TEST); ck();
+                gl::Disable(gl::DEPTH_TEST);
+                ck();
             }
 
             if render_options.stencil.is_some() {
-                gl::StencilMask(!0); ck();
-                gl::Disable(gl::STENCIL_TEST); ck();
+                gl::StencilMask(!0);
+                ck();
+                gl::Disable(gl::STENCIL_TEST);
+                ck();
             }
 
-            gl::ColorMask(gl::TRUE, gl::TRUE, gl::TRUE, gl::TRUE); ck();
+            gl::ColorMask(gl::TRUE, gl::TRUE, gl::TRUE, gl::TRUE);
+            ck();
         }
     }
 }
@@ -344,8 +411,9 @@ impl Device for GLDevice {
     #[inline]
     fn device_name(&self) -> String {
         unsafe {
-            CStr::from_ptr(gl::GetString(gl::RENDERER) as *const c_char).to_string_lossy()
-                                                                        .to_string()
+            CStr::from_ptr(gl::GetString(gl::RENDERER) as *const c_char)
+                .to_string_lossy()
+                .to_string()
         }
     }
 
@@ -357,41 +425,60 @@ impl Device for GLDevice {
     }
 
     fn create_texture(&self, format: TextureFormat, size: Vector2I) -> GLTexture {
-        let mut texture = GLTexture { gl_texture: 0, size, format };
+        let mut texture = GLTexture {
+            gl_texture: 0,
+            size,
+            format,
+        };
         unsafe {
-            gl::GenTextures(1, &mut texture.gl_texture); ck();
+            gl::GenTextures(1, &mut texture.gl_texture);
+            ck();
             self.bind_texture(&texture, 0);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           format.gl_internal_format(),
-                           size.x() as GLsizei,
-                           size.y() as GLsizei,
-                           0,
-                           format.gl_format(),
-                           format.gl_type(),
-                           ptr::null()); ck();
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                format.gl_internal_format(),
+                size.x() as GLsizei,
+                size.y() as GLsizei,
+                0,
+                format.gl_format(),
+                format.gl_type(),
+                ptr::null(),
+            );
+            ck();
         }
 
         self.set_texture_sampling_mode(&texture, TextureSamplingFlags::empty());
         texture
     }
 
-    fn create_texture_from_data(&self, format: TextureFormat, size: Vector2I, data: TextureDataRef)
-                                -> GLTexture {
+    fn create_texture_from_data(
+        &self,
+        format: TextureFormat,
+        size: Vector2I,
+        data: TextureDataRef,
+    ) -> GLTexture {
         let data_ptr = data.check_and_extract_data_ptr(size, format);
-        let mut texture = GLTexture { gl_texture: 0, size, format: TextureFormat::R8 };
+        let mut texture = GLTexture {
+            gl_texture: 0,
+            size,
+            format: TextureFormat::R8,
+        };
         unsafe {
-            gl::GenTextures(1, &mut texture.gl_texture); ck();
+            gl::GenTextures(1, &mut texture.gl_texture);
+            ck();
             self.bind_texture(&texture, 0);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           format.gl_internal_format(),
-                           size.x() as GLsizei,
-                           size.y() as GLsizei,
-                           0,
-                           format.gl_format(),
-                           format.gl_type(),
-                           data_ptr)
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                format.gl_internal_format(),
+                size.x() as GLsizei,
+                size.y() as GLsizei,
+                0,
+                format.gl_format(),
+                format.gl_type(),
+                data_ptr,
+            )
         }
 
         self.set_texture_sampling_mode(&texture, TextureSamplingFlags::empty());
@@ -407,29 +494,39 @@ impl Device for GLDevice {
         let source = output;
 
         let gl_shader_kind = match kind {
-            ShaderKind::Vertex   => gl::VERTEX_SHADER,
+            ShaderKind::Vertex => gl::VERTEX_SHADER,
             ShaderKind::Fragment => gl::FRAGMENT_SHADER,
-            ShaderKind::Compute  => gl::COMPUTE_SHADER,
+            ShaderKind::Compute => gl::COMPUTE_SHADER,
         };
 
         unsafe {
-            let gl_shader = gl::CreateShader(gl_shader_kind); ck();
-            gl::ShaderSource(gl_shader,
-                             1,
-                             [source.as_ptr() as *const GLchar].as_ptr(),
-                             [source.len() as GLint].as_ptr()); ck();
-            gl::CompileShader(gl_shader); ck();
+            let gl_shader = gl::CreateShader(gl_shader_kind);
+            ck();
+            gl::ShaderSource(
+                gl_shader,
+                1,
+                [source.as_ptr() as *const GLchar].as_ptr(),
+                [source.len() as GLint].as_ptr(),
+            );
+            ck();
+            gl::CompileShader(gl_shader);
+            ck();
 
             let mut compile_status = 0;
-            gl::GetShaderiv(gl_shader, gl::COMPILE_STATUS, &mut compile_status); ck();
+            gl::GetShaderiv(gl_shader, gl::COMPILE_STATUS, &mut compile_status);
+            ck();
             if compile_status != gl::TRUE as GLint {
                 let mut info_log_length = 0;
-                gl::GetShaderiv(gl_shader, gl::INFO_LOG_LENGTH, &mut info_log_length); ck();
+                gl::GetShaderiv(gl_shader, gl::INFO_LOG_LENGTH, &mut info_log_length);
+                ck();
                 let mut info_log = vec![0; info_log_length as usize];
-                gl::GetShaderInfoLog(gl_shader,
-                                     info_log.len() as GLint,
-                                     ptr::null_mut(),
-                                     info_log.as_mut_ptr() as *mut GLchar); ck();
+                gl::GetShaderInfoLog(
+                    gl_shader,
+                    info_log.len() as GLint,
+                    ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
+                ck();
                 error!("Shader info log:\n{}", String::from_utf8_lossy(&info_log));
                 panic!("{:?} shader '{}' compilation failed", kind, name);
             }
@@ -438,46 +535,64 @@ impl Device for GLDevice {
         }
     }
 
-    fn create_program_from_shaders(&self,
-                                   _resources: &dyn ResourceLoader,
-                                   name: &str,
-                                   shaders: ProgramKind<GLShader>)
-                                   -> GLProgram {
+    fn create_program_from_shaders(
+        &self,
+        _resources: &dyn ResourceLoader,
+        name: &str,
+        shaders: ProgramKind<GLShader>,
+    ) -> GLProgram {
         let gl_program;
         unsafe {
-            gl_program = gl::CreateProgram(); ck();
+            gl_program = gl::CreateProgram();
+            ck();
             match shaders {
                 ProgramKind::Raster {
                     vertex: ref vertex_shader,
                     fragment: ref fragment_shader,
                 } => {
-                    gl::AttachShader(gl_program, vertex_shader.gl_shader); ck();
-                    gl::AttachShader(gl_program, fragment_shader.gl_shader); ck();
+                    gl::AttachShader(gl_program, vertex_shader.gl_shader);
+                    ck();
+                    gl::AttachShader(gl_program, fragment_shader.gl_shader);
+                    ck();
                 }
                 ProgramKind::Compute(ref compute_shader) => {
-                    gl::AttachShader(gl_program, compute_shader.gl_shader); ck();
+                    gl::AttachShader(gl_program, compute_shader.gl_shader);
+                    ck();
                 }
             }
-            gl::LinkProgram(gl_program); ck();
+            gl::LinkProgram(gl_program);
+            ck();
 
             let mut link_status = 0;
-            gl::GetProgramiv(gl_program, gl::LINK_STATUS, &mut link_status); ck();
+            gl::GetProgramiv(gl_program, gl::LINK_STATUS, &mut link_status);
+            ck();
             if link_status != gl::TRUE as GLint {
                 let mut info_log_length = 0;
-                gl::GetProgramiv(gl_program, gl::INFO_LOG_LENGTH, &mut info_log_length); ck();
+                gl::GetProgramiv(gl_program, gl::INFO_LOG_LENGTH, &mut info_log_length);
+                ck();
                 let mut info_log = vec![0; info_log_length as usize];
-                gl::GetProgramInfoLog(gl_program,
-                                      info_log.len() as GLint,
-                                      ptr::null_mut(),
-                                      info_log.as_mut_ptr() as *mut GLchar); ck();
+                gl::GetProgramInfoLog(
+                    gl_program,
+                    info_log.len() as GLint,
+                    ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
+                ck();
                 eprintln!("Program info log:\n{}", String::from_utf8_lossy(&info_log));
                 panic!("Program '{}' linking failed", name);
             }
         }
 
-        let parameters = GLProgramParameters { textures: vec![], images: vec![] };
+        let parameters = GLProgramParameters {
+            textures: vec![],
+            images: vec![],
+        };
 
-        GLProgram { gl_program, shaders, parameters: RefCell::new(parameters) }
+        GLProgram {
+            gl_program,
+            shaders,
+            parameters: RefCell::new(parameters),
+        }
     }
 
     #[inline]
@@ -489,28 +604,31 @@ impl Device for GLDevice {
     fn create_vertex_array(&self) -> GLVertexArray {
         unsafe {
             let mut array = GLVertexArray { gl_vertex_array: 0 };
-            gl::GenVertexArrays(1, &mut array.gl_vertex_array); ck();
+            gl::GenVertexArrays(1, &mut array.gl_vertex_array);
+            ck();
             array
         }
     }
 
     fn get_vertex_attr(&self, program: &Self::Program, name: &str) -> Option<GLVertexAttr> {
         let name = CString::new(format!("a{}", name)).unwrap();
-        let attr = unsafe {
-            gl::GetAttribLocation(program.gl_program, name.as_ptr() as *const GLchar)
-        }; ck();
+        let attr =
+            unsafe { gl::GetAttribLocation(program.gl_program, name.as_ptr() as *const GLchar) };
+        ck();
         if attr < 0 {
             None
         } else {
-            Some(GLVertexAttr { attr: attr as GLuint })
+            Some(GLVertexAttr {
+                attr: attr as GLuint,
+            })
         }
     }
 
     fn get_uniform(&self, program: &GLProgram, name: &str) -> GLUniform {
         let name = CString::new(format!("u{}", name)).unwrap();
-        let location = unsafe {
-            gl::GetUniformLocation(program.gl_program, name.as_ptr() as *const GLchar)
-        }; ck();
+        let location =
+            unsafe { gl::GetUniformLocation(program.gl_program, name.as_ptr() as *const GLchar) };
+        ck();
         GLUniform { location }
     }
 
@@ -525,7 +643,10 @@ impl Device for GLDevice {
                 index
             }
         };
-        GLTextureParameter { uniform, texture_unit: index as GLuint }
+        GLTextureParameter {
+            uniform,
+            texture_unit: index as GLuint,
+        }
     }
 
     fn get_image_parameter(&self, program: &GLProgram, name: &str) -> GLImageParameter {
@@ -539,17 +660,24 @@ impl Device for GLDevice {
                 index
             }
         };
-        GLImageParameter { uniform, image_unit: index as GLuint }
+        GLImageParameter {
+            uniform,
+            image_unit: index as GLuint,
+        }
     }
 
     fn get_storage_buffer(&self, _: &Self::Program, _: &str, binding: u32) -> GLStorageBuffer {
-        GLStorageBuffer { location: binding as GLint }
+        GLStorageBuffer {
+            location: binding as GLint,
+        }
     }
 
-    fn configure_vertex_attr(&self,
-                             vertex_array: &GLVertexArray,
-                             attr: &GLVertexAttr,
-                             descriptor: &VertexAttrDescriptor) {
+    fn configure_vertex_attr(
+        &self,
+        vertex_array: &GLVertexArray,
+        attr: &GLVertexAttr,
+        descriptor: &VertexAttrDescriptor,
+    ) {
         debug_assert_ne!(descriptor.stride, 0);
 
         self.bind_vertex_array(vertex_array);
@@ -563,24 +691,32 @@ impl Device for GLDevice {
                     } else {
                         gl::FALSE
                     };
-                    gl::VertexAttribPointer(attr.attr,
-                                            descriptor.size as GLint,
-                                            attr_type,
-                                            normalized,
-                                            descriptor.stride as GLint,
-                                            descriptor.offset as *const GLvoid); ck();
+                    gl::VertexAttribPointer(
+                        attr.attr,
+                        descriptor.size as GLint,
+                        attr_type,
+                        normalized,
+                        descriptor.stride as GLint,
+                        descriptor.offset as *const GLvoid,
+                    );
+                    ck();
                 }
                 VertexAttrClass::Int => {
-                    gl::VertexAttribIPointer(attr.attr,
-                                             descriptor.size as GLint,
-                                             attr_type,
-                                             descriptor.stride as GLint,
-                                             descriptor.offset as *const GLvoid); ck();
+                    gl::VertexAttribIPointer(
+                        attr.attr,
+                        descriptor.size as GLint,
+                        attr_type,
+                        descriptor.stride as GLint,
+                        descriptor.offset as *const GLvoid,
+                    );
+                    ck();
                 }
             }
 
-            gl::VertexAttribDivisor(attr.attr, descriptor.divisor); ck();
-            gl::EnableVertexAttribArray(attr.attr); ck();
+            gl::VertexAttribDivisor(attr.attr, descriptor.divisor);
+            ck();
+            gl::EnableVertexAttribArray(attr.attr);
+            ck();
         }
 
         self.unbind_vertex_array();
@@ -589,24 +725,36 @@ impl Device for GLDevice {
     fn create_framebuffer(&self, texture: GLTexture) -> GLFramebuffer {
         let mut gl_framebuffer = 0;
         unsafe {
-            gl::GenFramebuffers(1, &mut gl_framebuffer); ck();
-            gl::BindFramebuffer(gl::FRAMEBUFFER, gl_framebuffer); ck();
+            gl::GenFramebuffers(1, &mut gl_framebuffer);
+            ck();
+            gl::BindFramebuffer(gl::FRAMEBUFFER, gl_framebuffer);
+            ck();
             self.bind_texture(&texture, 0);
-            gl::FramebufferTexture2D(gl::FRAMEBUFFER,
-                                     gl::COLOR_ATTACHMENT0,
-                                     gl::TEXTURE_2D,
-                                     texture.gl_texture,
-                                     0); ck();
-            assert_eq!(gl::CheckFramebufferStatus(gl::FRAMEBUFFER), gl::FRAMEBUFFER_COMPLETE);
+            gl::FramebufferTexture2D(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                gl::TEXTURE_2D,
+                texture.gl_texture,
+                0,
+            );
+            ck();
+            assert_eq!(
+                gl::CheckFramebufferStatus(gl::FRAMEBUFFER),
+                gl::FRAMEBUFFER_COMPLETE
+            );
         }
 
-        GLFramebuffer { gl_framebuffer, texture }
+        GLFramebuffer {
+            gl_framebuffer,
+            texture,
+        }
     }
 
     fn create_buffer(&self, mode: BufferUploadMode) -> GLBuffer {
         unsafe {
             let mut gl_buffer = 0;
-            gl::GenBuffers(1, &mut gl_buffer); ck();
+            gl::GenBuffers(1, &mut gl_buffer);
+            ck();
             let object = Rc::new(GLBufferObject { gl_buffer });
             GLBuffer { object, mode }
         }
@@ -621,24 +769,32 @@ impl Device for GLDevice {
         let len = (len * mem::size_of::<T>()) as GLsizeiptr;
         let usage = buffer.mode.to_gl_usage();
         unsafe {
-            gl::BindBuffer(target, buffer.object.gl_buffer); ck();
-            gl::BufferData(target, len, ptr, usage); ck();
+            gl::BindBuffer(target, buffer.object.gl_buffer);
+            ck();
+            gl::BufferData(target, len, ptr, usage);
+            ck();
         }
     }
 
-    fn upload_to_buffer<T>(&self,
-                           buffer: &Self::Buffer,
-                           position: usize,
-                           data: &[T],
-                           target: BufferTarget) {
+    fn upload_to_buffer<T>(
+        &self,
+        buffer: &Self::Buffer,
+        position: usize,
+        data: &[T],
+        target: BufferTarget,
+    ) {
         let target = target.to_gl_target();
         let len = (data.len() * mem::size_of::<T>()) as GLsizeiptr;
         unsafe {
-            gl::BindBuffer(target, buffer.object.gl_buffer); ck();
-            gl::BufferSubData(target,
-                              position as GLintptr,
-                              len,
-                              data.as_ptr() as *const GLvoid); ck();
+            gl::BindBuffer(target, buffer.object.gl_buffer);
+            ck();
+            gl::BufferSubData(
+                target,
+                position as GLintptr,
+                len,
+                data.as_ptr() as *const GLvoid,
+            );
+            ck();
         }
     }
 
@@ -655,7 +811,8 @@ impl Device for GLDevice {
             format: framebuffer.texture.format,
         };
         unsafe {
-            gl::DeleteFramebuffers(1, &mut framebuffer.gl_framebuffer); ck();
+            gl::DeleteFramebuffers(1, &mut framebuffer.gl_framebuffer);
+            ck();
         }
         mem::forget(framebuffer);
         texture
@@ -674,34 +831,46 @@ impl Device for GLDevice {
     fn set_texture_sampling_mode(&self, texture: &Self::Texture, flags: TextureSamplingFlags) {
         self.bind_texture(texture, 0);
         unsafe {
-            gl::TexParameteri(gl::TEXTURE_2D,
-                              gl::TEXTURE_MIN_FILTER,
-                              if flags.contains(TextureSamplingFlags::NEAREST_MIN) {
-                                  gl::NEAREST as GLint
-                              } else {
-                                  gl::LINEAR as GLint
-                              }); ck();
-            gl::TexParameteri(gl::TEXTURE_2D,
-                              gl::TEXTURE_MAG_FILTER,
-                              if flags.contains(TextureSamplingFlags::NEAREST_MAG) {
-                                  gl::NEAREST as GLint
-                              } else {
-                                  gl::LINEAR as GLint
-                              }); ck();
-            gl::TexParameteri(gl::TEXTURE_2D,
-                              gl::TEXTURE_WRAP_S,
-                              if flags.contains(TextureSamplingFlags::REPEAT_U) {
-                                  gl::REPEAT as GLint
-                              } else {
-                                  gl::CLAMP_TO_EDGE as GLint
-                              }); ck();
-            gl::TexParameteri(gl::TEXTURE_2D,
-                              gl::TEXTURE_WRAP_T,
-                              if flags.contains(TextureSamplingFlags::REPEAT_V) {
-                                  gl::REPEAT as GLint
-                              } else {
-                                  gl::CLAMP_TO_EDGE as GLint
-                              }); ck();
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                if flags.contains(TextureSamplingFlags::NEAREST_MIN) {
+                    gl::NEAREST as GLint
+                } else {
+                    gl::LINEAR as GLint
+                },
+            );
+            ck();
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MAG_FILTER,
+                if flags.contains(TextureSamplingFlags::NEAREST_MAG) {
+                    gl::NEAREST as GLint
+                } else {
+                    gl::LINEAR as GLint
+                },
+            );
+            ck();
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_S,
+                if flags.contains(TextureSamplingFlags::REPEAT_U) {
+                    gl::REPEAT as GLint
+                } else {
+                    gl::CLAMP_TO_EDGE as GLint
+                },
+            );
+            ck();
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_T,
+                if flags.contains(TextureSamplingFlags::REPEAT_V) {
+                    gl::REPEAT as GLint
+                } else {
+                    gl::CLAMP_TO_EDGE as GLint
+                },
+            );
+            ck();
         }
     }
 
@@ -716,33 +885,42 @@ impl Device for GLDevice {
         unsafe {
             self.bind_texture(texture, 0);
             if rect.origin() == Vector2I::default() && rect.size() == texture.size {
-                gl::TexImage2D(gl::TEXTURE_2D,
-                               0,
-                               texture.format.gl_internal_format(),
-                               texture.size.x() as GLsizei,
-                               texture.size.y() as GLsizei,
-                               0,
-                               texture.format.gl_format(),
-                               texture.format.gl_type(),
-                               data_ptr); ck();
+                gl::TexImage2D(
+                    gl::TEXTURE_2D,
+                    0,
+                    texture.format.gl_internal_format(),
+                    texture.size.x() as GLsizei,
+                    texture.size.y() as GLsizei,
+                    0,
+                    texture.format.gl_format(),
+                    texture.format.gl_type(),
+                    data_ptr,
+                );
+                ck();
             } else {
-                gl::TexSubImage2D(gl::TEXTURE_2D,
-                                  0,
-                                  rect.origin().x(),
-                                  rect.origin().y(),
-                                  rect.size().x() as GLsizei,
-                                  rect.size().y() as GLsizei,
-                                  texture.format.gl_format(),
-                                  texture.format.gl_type(),
-                                  data_ptr); ck();
+                gl::TexSubImage2D(
+                    gl::TEXTURE_2D,
+                    0,
+                    rect.origin().x(),
+                    rect.origin().y(),
+                    rect.size().x() as GLsizei,
+                    rect.size().y() as GLsizei,
+                    texture.format.gl_format(),
+                    texture.format.gl_type(),
+                    data_ptr,
+                );
+                ck();
             }
         }
 
         self.set_texture_sampling_mode(texture, TextureSamplingFlags::empty());
     }
 
-    fn read_pixels(&self, render_target: &RenderTarget<GLDevice>, viewport: RectI)
-                   -> GLTextureDataReceiver {
+    fn read_pixels(
+        &self,
+        render_target: &RenderTarget<GLDevice>,
+        viewport: RectI,
+    ) -> GLTextureDataReceiver {
         let (origin, size) = (viewport.origin(), viewport.size());
         let format = self.render_target_format(render_target);
         self.bind_render_target(render_target);
@@ -750,32 +928,54 @@ impl Device for GLDevice {
 
         unsafe {
             let mut gl_pixel_buffer = 0;
-            gl::GenBuffers(1, &mut gl_pixel_buffer); ck();
-            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, gl_pixel_buffer); ck();
-            gl::BufferData(gl::PIXEL_PACK_BUFFER,
-                           byte_size as GLsizeiptr,
-                           ptr::null(),
-                           gl::STATIC_READ); ck();
+            gl::GenBuffers(1, &mut gl_pixel_buffer);
+            ck();
+            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, gl_pixel_buffer);
+            ck();
+            gl::BufferData(
+                gl::PIXEL_PACK_BUFFER,
+                byte_size as GLsizeiptr,
+                ptr::null(),
+                gl::STATIC_READ,
+            );
+            ck();
 
-            gl::ReadPixels(origin.x(),
-                           origin.y(),
-                           size.x() as GLsizei,
-                           size.y() as GLsizei,
-                           format.gl_format(),
-                           format.gl_type(),
-                           0 as *mut GLvoid); ck();
+            gl::ReadPixels(
+                origin.x(),
+                origin.y(),
+                size.x() as GLsizei,
+                size.y() as GLsizei,
+                format.gl_format(),
+                format.gl_type(),
+                0 as *mut GLvoid,
+            );
+            ck();
 
             let gl_sync = gl::FenceSync(gl::SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-            GLTextureDataReceiver { gl_pixel_buffer, gl_sync, size, format }
+            GLTextureDataReceiver {
+                gl_pixel_buffer,
+                gl_sync,
+                size,
+                format,
+            }
         }
     }
 
-    fn read_buffer(&self, buffer: &GLBuffer, target: BufferTarget, range: Range<usize>)
-                   -> GLBufferDataReceiver {
+    fn read_buffer(
+        &self,
+        buffer: &GLBuffer,
+        target: BufferTarget,
+        range: Range<usize>,
+    ) -> GLBufferDataReceiver {
         unsafe {
             let gl_sync = gl::FenceSync(gl::SYNC_GPU_COMMANDS_COMPLETE, 0);
-            GLBufferDataReceiver { object: buffer.object.clone(), gl_sync, range, target }
+            GLBufferDataReceiver {
+                object: buffer.object.clone(),
+                gl_sync,
+                range,
+                target,
+            }
         }
     }
 
@@ -785,15 +985,20 @@ impl Device for GLDevice {
     }
 
     fn end_commands(&self) {
-        unsafe { gl::Flush(); }
+        unsafe {
+            gl::Flush();
+        }
     }
 
     fn draw_arrays(&self, index_count: u32, render_state: &RenderState<Self>) {
         self.set_render_state(render_state);
         unsafe {
-            gl::DrawArrays(render_state.primitive.to_gl_primitive(),
-                           0,
-                           index_count as GLsizei); ck();
+            gl::DrawArrays(
+                render_state.primitive.to_gl_primitive(),
+                0,
+                index_count as GLsizei,
+            );
+            ck();
         }
         self.reset_render_state(render_state);
     }
@@ -801,25 +1006,33 @@ impl Device for GLDevice {
     fn draw_elements(&self, index_count: u32, render_state: &RenderState<Self>) {
         self.set_render_state(render_state);
         unsafe {
-            gl::DrawElements(render_state.primitive.to_gl_primitive(),
-                             index_count as GLsizei,
-                             gl::UNSIGNED_INT,
-                             ptr::null()); ck();
+            gl::DrawElements(
+                render_state.primitive.to_gl_primitive(),
+                index_count as GLsizei,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+            );
+            ck();
         }
         self.reset_render_state(render_state);
     }
 
-    fn draw_elements_instanced(&self,
-                               index_count: u32,
-                               instance_count: u32,
-                               render_state: &RenderState<Self>) {
+    fn draw_elements_instanced(
+        &self,
+        index_count: u32,
+        instance_count: u32,
+        render_state: &RenderState<Self>,
+    ) {
         self.set_render_state(render_state);
         unsafe {
-            gl::DrawElementsInstanced(render_state.primitive.to_gl_primitive(),
-                                      index_count as GLsizei,
-                                      gl::UNSIGNED_INT,
-                                      ptr::null(),
-                                      instance_count as GLsizei); ck();
+            gl::DrawElementsInstanced(
+                render_state.primitive.to_gl_primitive(),
+                index_count as GLsizei,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+                instance_count as GLsizei,
+            );
+            ck();
         }
         self.reset_render_state(render_state);
     }
@@ -827,7 +1040,8 @@ impl Device for GLDevice {
     fn dispatch_compute(&self, dimensions: ComputeDimensions, compute_state: &ComputeState<Self>) {
         self.set_compute_state(compute_state);
         unsafe {
-            gl::DispatchCompute(dimensions.x, dimensions.y, dimensions.z); ck();
+            gl::DispatchCompute(dimensions.x, dimensions.y, dimensions.z);
+            ck();
         }
         self.reset_compute_state(compute_state);
     }
@@ -836,7 +1050,8 @@ impl Device for GLDevice {
     fn create_timer_query(&self) -> GLTimerQuery {
         let mut query = GLTimerQuery { gl_query: 0 };
         unsafe {
-            gl::GenQueries(1, &mut query.gl_query); ck();
+            gl::GenQueries(1, &mut query.gl_query);
+            ck();
         }
         query
     }
@@ -844,21 +1059,24 @@ impl Device for GLDevice {
     #[inline]
     fn begin_timer_query(&self, query: &Self::TimerQuery) {
         unsafe {
-            gl::BeginQuery(gl::TIME_ELAPSED, query.gl_query); ck();
+            gl::BeginQuery(gl::TIME_ELAPSED, query.gl_query);
+            ck();
         }
     }
 
     #[inline]
     fn end_timer_query(&self, _: &Self::TimerQuery) {
         unsafe {
-            gl::EndQuery(gl::TIME_ELAPSED); ck();
+            gl::EndQuery(gl::TIME_ELAPSED);
+            ck();
         }
     }
 
     fn try_recv_timer_query(&self, query: &Self::TimerQuery) -> Option<Duration> {
         unsafe {
             let mut result = 0;
-            gl::GetQueryObjectiv(query.gl_query, gl::QUERY_RESULT_AVAILABLE, &mut result); ck();
+            gl::GetQueryObjectiv(query.gl_query, gl::QUERY_RESULT_AVAILABLE, &mut result);
+            ck();
             if result == gl::FALSE as GLint {
                 None
             } else {
@@ -870,16 +1088,16 @@ impl Device for GLDevice {
     fn recv_timer_query(&self, query: &Self::TimerQuery) -> Duration {
         unsafe {
             let mut result = 0;
-            gl::GetQueryObjectui64v(query.gl_query, gl::QUERY_RESULT, &mut result); ck();
+            gl::GetQueryObjectui64v(query.gl_query, gl::QUERY_RESULT, &mut result);
+            ck();
             Duration::from_nanos(result)
         }
     }
 
     fn try_recv_texture_data(&self, receiver: &Self::TextureDataReceiver) -> Option<TextureData> {
         unsafe {
-            let result = gl::ClientWaitSync(receiver.gl_sync,
-                                            gl::SYNC_FLUSH_COMMANDS_BIT,
-                                            0); ck();
+            let result = gl::ClientWaitSync(receiver.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, 0);
+            ck();
             if result == gl::TIMEOUT_EXPIRED || result == gl::WAIT_FAILED {
                 None
             } else {
@@ -890,9 +1108,8 @@ impl Device for GLDevice {
 
     fn recv_texture_data(&self, receiver: &Self::TextureDataReceiver) -> TextureData {
         unsafe {
-            let result = gl::ClientWaitSync(receiver.gl_sync,
-                                            gl::SYNC_FLUSH_COMMANDS_BIT,
-                                            !0); ck();
+            let result = gl::ClientWaitSync(receiver.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, !0);
+            ck();
             debug_assert!(result != gl::TIMEOUT_EXPIRED && result != gl::WAIT_FAILED);
             self.get_texture_data(receiver)
         }
@@ -900,9 +1117,8 @@ impl Device for GLDevice {
 
     fn try_recv_buffer(&self, receiver: &Self::BufferDataReceiver) -> Option<Vec<u8>> {
         unsafe {
-            let result = gl::ClientWaitSync(receiver.gl_sync,
-                                            gl::SYNC_FLUSH_COMMANDS_BIT,
-                                            0); ck();
+            let result = gl::ClientWaitSync(receiver.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, 0);
+            ck();
             if result == gl::TIMEOUT_EXPIRED || result == gl::WAIT_FAILED {
                 None
             } else {
@@ -913,9 +1129,8 @@ impl Device for GLDevice {
 
     fn recv_buffer(&self, receiver: &Self::BufferDataReceiver) -> Vec<u8> {
         unsafe {
-            let result = gl::ClientWaitSync(receiver.gl_sync,
-                                            gl::SYNC_FLUSH_COMMANDS_BIT,
-                                            !0); ck();
+            let result = gl::ClientWaitSync(receiver.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, !0);
+            ck();
             debug_assert!(result != gl::TIMEOUT_EXPIRED && result != gl::WAIT_FAILED);
             self.get_buffer_data(receiver)
         }
@@ -925,23 +1140,28 @@ impl Device for GLDevice {
     fn bind_buffer(&self, vertex_array: &GLVertexArray, buffer: &GLBuffer, target: BufferTarget) {
         self.bind_vertex_array(vertex_array);
         unsafe {
-            gl::BindBuffer(target.to_gl_target(), buffer.object.gl_buffer); ck();
+            gl::BindBuffer(target.to_gl_target(), buffer.object.gl_buffer);
+            ck();
         }
         self.unbind_vertex_array();
     }
 
     #[inline]
-    fn create_shader(&self, resources: &dyn ResourceLoader, name: &str, kind: ShaderKind)
-                     -> Self::Shader {
+    fn create_shader(
+        &self,
+        resources: &dyn ResourceLoader,
+        name: &str,
+        kind: ShaderKind,
+    ) -> Self::Shader {
         match (self.version, kind) {
             (GLVersion::GL3, ShaderKind::Compute) | (GLVersion::GLES3, ShaderKind::Compute) => {
                 panic!("Compute shaders are not supported on OpenGL versions prior to 4!")
             }
-            (GLVersion::GL3, ShaderKind::Vertex) |
-            (GLVersion::GL3, ShaderKind::Fragment) |
-            (GLVersion::GLES3, ShaderKind::Vertex) |
-            (GLVersion::GLES3, ShaderKind::Fragment) |
-            (GLVersion::GL4, _) => {}
+            (GLVersion::GL3, ShaderKind::Vertex)
+            | (GLVersion::GL3, ShaderKind::Fragment)
+            | (GLVersion::GLES3, ShaderKind::Vertex)
+            | (GLVersion::GLES3, ShaderKind::Fragment)
+            | (GLVersion::GL4, _) => {}
         }
         let directory = match self.version {
             GLVersion::GL3 | GLVersion::GLES3 => "gl3",
@@ -958,14 +1178,16 @@ impl Device for GLDevice {
 
     fn add_fence(&self) -> Self::Fence {
         unsafe {
-            let gl_sync = gl::FenceSync(gl::SYNC_GPU_COMMANDS_COMPLETE, 0); ck();
+            let gl_sync = gl::FenceSync(gl::SYNC_GPU_COMMANDS_COMPLETE, 0);
+            ck();
             GLFence { gl_sync }
         }
     }
 
     fn wait_for_fence(&self, fence: &Self::Fence) {
         unsafe {
-            gl::ClientWaitSync(fence.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, 0); ck();
+            gl::ClientWaitSync(fence.gl_sync, gl::SYNC_FLUSH_COMMANDS_BIT, 0);
+            ck();
         }
     }
 }
@@ -980,69 +1202,83 @@ impl GLDevice {
 
     fn bind_vertex_array(&self, vertex_array: &GLVertexArray) {
         unsafe {
-            gl::BindVertexArray(vertex_array.gl_vertex_array); ck();
+            gl::BindVertexArray(vertex_array.gl_vertex_array);
+            ck();
         }
     }
 
     fn unbind_vertex_array(&self) {
         unsafe {
-            gl::BindVertexArray(0); ck();
+            gl::BindVertexArray(0);
+            ck();
         }
     }
 
     fn bind_texture(&self, texture: &GLTexture, unit: u32) {
         unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + unit); ck();
-            gl::BindTexture(gl::TEXTURE_2D, texture.gl_texture); ck();
+            gl::ActiveTexture(gl::TEXTURE0 + unit);
+            ck();
+            gl::BindTexture(gl::TEXTURE_2D, texture.gl_texture);
+            ck();
         }
     }
 
     fn unbind_texture(&self, unit: u32) {
         unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + unit); ck();
-            gl::BindTexture(gl::TEXTURE_2D, 0); ck();
+            gl::ActiveTexture(gl::TEXTURE0 + unit);
+            ck();
+            gl::BindTexture(gl::TEXTURE_2D, 0);
+            ck();
         }
     }
 
     fn bind_image(&self, binding: &ImageBinding<GLImageParameter, GLTexture>) {
         unsafe {
-            gl::BindImageTexture(binding.0.image_unit,
-                                 binding.1.gl_texture,
-                                 0,
-                                 gl::FALSE,
-                                 0,
-                                 binding.2.to_gl_access(),
-                                 binding.1.format.gl_internal_format() as GLenum); ck();
+            gl::BindImageTexture(
+                binding.0.image_unit,
+                binding.1.gl_texture,
+                0,
+                gl::FALSE,
+                0,
+                binding.2.to_gl_access(),
+                binding.1.format.gl_internal_format() as GLenum,
+            );
+            ck();
         }
     }
 
     fn unbind_image(&self, unit: u32) {
         unsafe {
-            gl::BindImageTexture(unit, 0, 0, gl::FALSE, 0, gl::READ_ONLY, gl::RGBA8); ck();
+            gl::BindImageTexture(unit, 0, 0, gl::FALSE, 0, gl::READ_ONLY, gl::RGBA8);
+            ck();
         }
     }
 
     fn use_program(&self, program: &GLProgram) {
         unsafe {
-            gl::UseProgram(program.gl_program); ck();
+            gl::UseProgram(program.gl_program);
+            ck();
         }
     }
 
     fn unuse_program(&self) {
         unsafe {
-            gl::UseProgram(0); ck();
+            gl::UseProgram(0);
+            ck();
         }
     }
 
     fn bind_default_framebuffer(&self) {
         unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, self.default_framebuffer); ck();
+            gl::BindFramebuffer(gl::FRAMEBUFFER, self.default_framebuffer);
+            ck();
         }
     }
 
     fn bind_framebuffer(&self, framebuffer: &GLFramebuffer) {
         unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer.gl_framebuffer); ck();
+            gl::BindFramebuffer(gl::FRAMEBUFFER, framebuffer.gl_framebuffer);
+            ck();
         }
     }
 
@@ -1050,9 +1286,11 @@ impl GLDevice {
         let mut index = 0;
         while index < source.len() {
             if source[index..].starts_with(b"{{") {
-                let end_index = source[index..].iter()
-                                               .position(|character| *character == b'}')
-                                               .expect("Expected `}`!") + index;
+                let end_index = source[index..]
+                    .iter()
+                    .position(|character| *character == b'}')
+                    .expect("Expected `}`!")
+                    + index;
                 assert_eq!(source[end_index + 1], b'}');
                 let ident = String::from_utf8_lossy(&source[(index + 2)..end_index]);
                 if ident == "version" {
@@ -1072,22 +1310,29 @@ impl GLDevice {
         unsafe {
             let mut flags = 0;
             if let Some(color) = ops.color {
-                gl::ColorMask(gl::TRUE, gl::TRUE, gl::TRUE, gl::TRUE); ck();
-                gl::ClearColor(color.r(), color.g(), color.b(), color.a()); ck();
+                gl::ColorMask(gl::TRUE, gl::TRUE, gl::TRUE, gl::TRUE);
+                ck();
+                gl::ClearColor(color.r(), color.g(), color.b(), color.a());
+                ck();
                 flags |= gl::COLOR_BUFFER_BIT;
             }
             if let Some(depth) = ops.depth {
-                gl::DepthMask(gl::TRUE); ck();
-                gl::ClearDepthf(depth as _); ck(); // FIXME(pcwalton): GLES
+                gl::DepthMask(gl::TRUE);
+                ck();
+                gl::ClearDepthf(depth as _);
+                ck(); // FIXME(pcwalton): GLES
                 flags |= gl::DEPTH_BUFFER_BIT;
             }
             if let Some(stencil) = ops.stencil {
-                gl::StencilMask(!0); ck();
-                gl::ClearStencil(stencil as GLint); ck();
+                gl::StencilMask(!0);
+                ck();
+                gl::ClearStencil(stencil as GLint);
+                ck();
                 flags |= gl::STENCIL_BUFFER_BIT;
             }
             if flags != 0 {
-                gl::Clear(flags); ck();
+                gl::Clear(flags);
+                ck();
             }
         }
     }
@@ -1129,15 +1374,20 @@ impl GLDevice {
                 }
             }
 
-            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, receiver.gl_pixel_buffer); ck();
-            gl::GetBufferSubData(gl::PIXEL_PACK_BUFFER,
-                                 0,
-                                 texture_data_len as GLsizeiptr,
-                                 texture_data_ptr as *mut GLvoid); ck();
-            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, 0); ck();
+            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, receiver.gl_pixel_buffer);
+            ck();
+            gl::GetBufferSubData(
+                gl::PIXEL_PACK_BUFFER,
+                0,
+                texture_data_len as GLsizeiptr,
+                texture_data_ptr as *mut GLvoid,
+            );
+            ck();
+            gl::BindBuffer(gl::PIXEL_PACK_BUFFER, 0);
+            ck();
 
             match texture_data {
-                TextureData::U8(ref mut pixels)  => flip_y(pixels, size, channels),
+                TextureData::U8(ref mut pixels) => flip_y(pixels, size, channels),
                 TextureData::U16(ref mut pixels) => flip_y(pixels, size, channels),
                 TextureData::F16(ref mut pixels) => flip_y(pixels, size, channels),
                 TextureData::F32(ref mut pixels) => flip_y(pixels, size, channels),
@@ -1151,11 +1401,15 @@ impl GLDevice {
         let mut dest = vec![0; receiver.range.end - receiver.range.start];
         let gl_target = receiver.target.to_gl_target();
         unsafe {
-            gl::BindBuffer(gl_target, receiver.object.gl_buffer); ck();
-            gl::GetBufferSubData(gl_target,
-                                 receiver.range.start as GLintptr,
-                                 (receiver.range.end - receiver.range.start) as GLsizeiptr,
-                                 dest.as_mut_ptr() as *mut GLvoid); ck();
+            gl::BindBuffer(gl_target, receiver.object.gl_buffer);
+            ck();
+            gl::GetBufferSubData(
+                gl_target,
+                receiver.range.start as GLintptr,
+                (receiver.range.end - receiver.range.start) as GLsizeiptr,
+                dest.as_mut_ptr() as *mut GLvoid,
+            );
+            ck();
         }
         dest
     }
@@ -1169,7 +1423,8 @@ impl Drop for GLVertexArray {
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteVertexArrays(1, &mut self.gl_vertex_array); ck();
+            gl::DeleteVertexArrays(1, &mut self.gl_vertex_array);
+            ck();
         }
     }
 }
@@ -1179,39 +1434,47 @@ pub struct GLVertexAttr {
 }
 
 impl GLVertexAttr {
-    pub fn configure_float(&self,
-                           size: GLint,
-                           gl_type: GLuint,
-                           normalized: bool,
-                           stride: GLsizei,
-                           offset: usize,
-                           divisor: GLuint) {
+    pub fn configure_float(
+        &self,
+        size: GLint,
+        gl_type: GLuint,
+        normalized: bool,
+        stride: GLsizei,
+        offset: usize,
+        divisor: GLuint,
+    ) {
         unsafe {
-            gl::VertexAttribPointer(self.attr,
-                                    size,
-                                    gl_type,
-                                    if normalized { gl::TRUE } else { gl::FALSE },
-                                    stride,
-                                    offset as *const GLvoid); ck();
-            gl::VertexAttribDivisor(self.attr, divisor); ck();
-            gl::EnableVertexAttribArray(self.attr); ck();
+            gl::VertexAttribPointer(
+                self.attr,
+                size,
+                gl_type,
+                if normalized { gl::TRUE } else { gl::FALSE },
+                stride,
+                offset as *const GLvoid,
+            );
+            ck();
+            gl::VertexAttribDivisor(self.attr, divisor);
+            ck();
+            gl::EnableVertexAttribArray(self.attr);
+            ck();
         }
     }
 
-    pub fn configure_int(&self,
-                         size: GLint,
-                         gl_type: GLuint,
-                         stride: GLsizei,
-                         offset: usize,
-                         divisor: GLuint) {
+    pub fn configure_int(
+        &self,
+        size: GLint,
+        gl_type: GLuint,
+        stride: GLsizei,
+        offset: usize,
+        divisor: GLuint,
+    ) {
         unsafe {
-            gl::VertexAttribIPointer(self.attr,
-                                     size,
-                                     gl_type,
-                                     stride,
-                                     offset as *const GLvoid); ck();
-            gl::VertexAttribDivisor(self.attr, divisor); ck();
-            gl::EnableVertexAttribArray(self.attr); ck();
+            gl::VertexAttribIPointer(self.attr, size, gl_type, stride, offset as *const GLvoid);
+            ck();
+            gl::VertexAttribDivisor(self.attr, divisor);
+            ck();
+            gl::EnableVertexAttribArray(self.attr);
+            ck();
         }
     }
 }
@@ -1223,7 +1486,8 @@ pub struct GLFence {
 impl Drop for GLFence {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteSync(self.gl_sync); ck();
+            gl::DeleteSync(self.gl_sync);
+            ck();
         }
     }
 }
@@ -1236,7 +1500,8 @@ pub struct GLFramebuffer {
 impl Drop for GLFramebuffer {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteFramebuffers(1, &mut self.gl_framebuffer); ck();
+            gl::DeleteFramebuffers(1, &mut self.gl_framebuffer);
+            ck();
         }
     }
 }
@@ -1253,7 +1518,8 @@ pub struct GLBufferObject {
 impl Drop for GLBufferObject {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, &mut self.gl_buffer); ck();
+            gl::DeleteBuffers(1, &mut self.gl_buffer);
+            ck();
         }
     }
 }
@@ -1290,7 +1556,8 @@ pub struct GLProgram {
 impl Drop for GLProgram {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteProgram(self.gl_program); ck();
+            gl::DeleteProgram(self.gl_program);
+            ck();
         }
     }
 }
@@ -1309,7 +1576,8 @@ pub struct GLShader {
 impl Drop for GLShader {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteShader(self.gl_shader); ck();
+            gl::DeleteShader(self.gl_shader);
+            ck();
         }
     }
 }
@@ -1323,7 +1591,8 @@ pub struct GLTexture {
 impl Drop for GLTexture {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteTextures(1, &mut self.gl_texture); ck();
+            gl::DeleteTextures(1, &mut self.gl_texture);
+            ck();
         }
     }
 }
@@ -1336,7 +1605,8 @@ impl Drop for GLTimerQuery {
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteQueries(1, &mut self.gl_query); ck();
+            gl::DeleteQueries(1, &mut self.gl_query);
+            ck();
         }
     }
 }
@@ -1498,10 +1768,10 @@ impl VertexAttrTypeExt for VertexAttrType {
     fn to_gl_type(self) -> GLuint {
         match self {
             VertexAttrType::F32 => gl::FLOAT,
-            VertexAttrType::I8  => gl::BYTE,
+            VertexAttrType::I8 => gl::BYTE,
             VertexAttrType::I16 => gl::SHORT,
             VertexAttrType::I32 => gl::INT,
-            VertexAttrType::U8  => gl::UNSIGNED_BYTE,
+            VertexAttrType::U8 => gl::UNSIGNED_BYTE,
             VertexAttrType::U16 => gl::UNSIGNED_SHORT,
         }
     }
@@ -1532,8 +1802,10 @@ pub struct GLTextureDataReceiver {
 impl Drop for GLTextureDataReceiver {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteBuffers(1, &mut self.gl_pixel_buffer); ck();
-            gl::DeleteSync(self.gl_sync); ck();
+            gl::DeleteBuffers(1, &mut self.gl_pixel_buffer);
+            ck();
+            gl::DeleteSync(self.gl_sync);
+            ck();
         }
     }
 }
@@ -1569,16 +1841,20 @@ fn ck() {
         // returns gl::NO_ERROR, but for now we'll just report the first one we find.
         let err = gl::GetError();
         if err != gl::NO_ERROR {
-            panic!("GL error: 0x{:x} ({})", err, match err {
-                gl::INVALID_ENUM => "INVALID_ENUM",
-                gl::INVALID_VALUE => "INVALID_VALUE",
-                gl::INVALID_OPERATION => "INVALID_OPERATION",
-                gl::INVALID_FRAMEBUFFER_OPERATION => "INVALID_FRAMEBUFFER_OPERATION",
-                gl::OUT_OF_MEMORY => "OUT_OF_MEMORY",
-                gl::STACK_UNDERFLOW => "STACK_UNDERFLOW",
-                gl::STACK_OVERFLOW => "STACK_OVERFLOW",
-                _ => "Unknown"
-            });
+            panic!(
+                "GL error: 0x{:x} ({})",
+                err,
+                match err {
+                    gl::INVALID_ENUM => "INVALID_ENUM",
+                    gl::INVALID_VALUE => "INVALID_VALUE",
+                    gl::INVALID_OPERATION => "INVALID_OPERATION",
+                    gl::INVALID_FRAMEBUFFER_OPERATION => "INVALID_FRAMEBUFFER_OPERATION",
+                    gl::OUT_OF_MEMORY => "OUT_OF_MEMORY",
+                    gl::STACK_UNDERFLOW => "STACK_UNDERFLOW",
+                    gl::STACK_OVERFLOW => "STACK_OVERFLOW",
+                    _ => "Unknown",
+                }
+            );
         }
     }
 }

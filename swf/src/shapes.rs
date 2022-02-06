@@ -8,16 +8,16 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::{Twips, Point2};
+use crate::{Point2, Twips};
 
 use pathfinder_color::ColorU;
-use pathfinder_content::stroke::{LineJoin, LineCap};
+use pathfinder_content::stroke::{LineCap, LineJoin};
 use pathfinder_renderer::paint::Paint;
 use std::cmp::Ordering;
 use std::mem;
 use swf_types::tags::DefineShape;
-use swf_types::{CapStyle, FillStyle, JoinStyle, LineStyle, ShapeRecord, StraightSRgba8, Vector2D};
 use swf_types::{fill_styles, join_styles, shape_records};
+use swf_types::{CapStyle, FillStyle, JoinStyle, LineStyle, ShapeRecord, StraightSRgba8, Vector2D};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct LineSegment {
@@ -44,7 +44,7 @@ impl LineDirection {
     fn reverse(&mut self) {
         *self = match self {
             LineDirection::Right => LineDirection::Left,
-            LineDirection::Left => LineDirection::Right
+            LineDirection::Left => LineDirection::Right,
         };
     }
 }
@@ -194,19 +194,16 @@ impl StyleLayer {
         if self.is_fill() {
             // I think sorting is only necessary when we want to have closed shapes,
             // lines don't really need this?
-            self.shapes.sort_unstable_by(|a, b| {
-                match (a.is_closed(), b.is_closed()) {
+            self.shapes
+                .sort_unstable_by(|a, b| match (a.is_closed(), b.is_closed()) {
                     (true, true) | (false, false) => Ordering::Equal,
                     (true, false) => Ordering::Less,
                     (false, true) => Ordering::Greater,
-                }
-            });
+                });
         }
 
         // A cursor at the index of the first unclosed shape, if any.
-        let first_open_index = self.shapes
-            .iter()
-            .position(|frag| !frag.is_closed());
+        let first_open_index = self.shapes.iter().position(|frag| !frag.is_closed());
 
         if let Some(first_open_index) = first_open_index {
             if self.shapes.len() - first_open_index >= 2 {
@@ -235,78 +232,75 @@ impl StyleLayer {
     }
 }
 
-
 fn get_new_styles<'a>(
     fills: &'a Vec<FillStyle>,
-    lines: &'a Vec<LineStyle>
-) -> impl Iterator<Item=PaintOrLine> + 'a {
+    lines: &'a Vec<LineStyle>,
+) -> impl Iterator<Item = PaintOrLine> + 'a {
     // This enforces the order that fills and line groupings are added in.
     // Fills always come first.
-    fills.iter().filter_map(|fill_style| {
-        match fill_style {
-            FillStyle::Solid(
-                fill_styles::Solid {
-                    color: StraightSRgba8 {
-                        r,
-                        g,
-                        b,
-                        a
-                    }
-                }
-            ) => {
-                Some(PaintOrLine::Paint(Paint::from_color(ColorU { r: *r, g: *g, b: *b, a: *a })))
-            }
-            _ => unimplemented!("Unimplemented fill style")
-        }
-    }).chain(
-        lines.iter().filter_map(|LineStyle {
-            width,
-            fill,
-            join,
-            start_cap,
-            end_cap: _,
-            /*
-            TODO(jon): Handle these cases?
-            pub no_h_scale: bool,
-            pub no_v_scale: bool,
-            pub no_close: bool,
-            pub pixel_hinting: bool,
-            */
-            ..
-        }| {
-            if let FillStyle::Solid(fill_styles::Solid {
-                color: StraightSRgba8 {
-                    r,
-                    g,
-                    b,
-                    a
-                }
-            }) = fill {
-                // NOTE: PathFinder doesn't support different cap styles for start and end of
-                // strokes, so lets assume that they're always the same for the inputs we care about.
-                // Alternately, we split a line in two with a diff cap style for each.
-                // assert_eq!(start_cap, end_cap);
-                Some(PaintOrLine::Line(SwfLineStyle {
-                    width: Twips(*width as i32),
-                    color: Paint::from_color(ColorU { r: *r, g: *g, b: *b, a: *a }),
-                    join: match join {
-                        JoinStyle::Bevel => LineJoin::Bevel,
-                        JoinStyle::Round => LineJoin::Round,
-                        JoinStyle::Miter(join_styles::Miter { limit }) => {
-                            LineJoin::Miter(*limit as f32)
-                        },
-                    },
-                    cap: match start_cap {
-                        CapStyle::None => LineCap::Butt,
-                        CapStyle::Square => LineCap::Square,
-                        CapStyle::Round => LineCap::Round,
-                    },
-                }))
-            } else {
-                unimplemented!("unimplemented line fill style");
-            }
+    fills
+        .iter()
+        .filter_map(|fill_style| match fill_style {
+            FillStyle::Solid(fill_styles::Solid {
+                color: StraightSRgba8 { r, g, b, a },
+            }) => Some(PaintOrLine::Paint(Paint::from_color(ColorU {
+                r: *r,
+                g: *g,
+                b: *b,
+                a: *a,
+            }))),
+            _ => unimplemented!("Unimplemented fill style"),
         })
-    )
+        .chain(lines.iter().filter_map(
+            |LineStyle {
+                 width,
+                 fill,
+                 join,
+                 start_cap,
+                 end_cap: _,
+                 /*
+                 TODO(jon): Handle these cases?
+                 pub no_h_scale: bool,
+                 pub no_v_scale: bool,
+                 pub no_close: bool,
+                 pub pixel_hinting: bool,
+                 */
+                 ..
+             }| {
+                if let FillStyle::Solid(fill_styles::Solid {
+                    color: StraightSRgba8 { r, g, b, a },
+                }) = fill
+                {
+                    // NOTE: PathFinder doesn't support different cap styles for start and end of
+                    // strokes, so lets assume that they're always the same for the inputs we care about.
+                    // Alternately, we split a line in two with a diff cap style for each.
+                    // assert_eq!(start_cap, end_cap);
+                    Some(PaintOrLine::Line(SwfLineStyle {
+                        width: Twips(*width as i32),
+                        color: Paint::from_color(ColorU {
+                            r: *r,
+                            g: *g,
+                            b: *b,
+                            a: *a,
+                        }),
+                        join: match join {
+                            JoinStyle::Bevel => LineJoin::Bevel,
+                            JoinStyle::Round => LineJoin::Round,
+                            JoinStyle::Miter(join_styles::Miter { limit }) => {
+                                LineJoin::Miter(*limit as f32)
+                            }
+                        },
+                        cap: match start_cap {
+                            CapStyle::None => LineCap::Butt,
+                            CapStyle::Square => LineCap::Square,
+                            CapStyle::Round => LineCap::Round,
+                        },
+                    }))
+                } else {
+                    unimplemented!("unimplemented line fill style");
+                }
+            },
+        ))
 }
 
 pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
@@ -339,15 +333,13 @@ pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
 
     for record in &shape.records {
         match record {
-            ShapeRecord::StyleChange(
-                shape_records::StyleChange {
-                    move_to,
-                    new_styles,
-                    line_style,
-                    left_fill,
-                    right_fill,
-                }
-            ) => {
+            ShapeRecord::StyleChange(shape_records::StyleChange {
+                move_to,
+                new_styles,
+                line_style,
+                left_fill,
+                right_fill,
+            }) => {
                 // Start a whole new style grouping.
                 if let Some(new_style) = new_styles {
                     // Consolidate current style grouping and begin a new one.
@@ -406,7 +398,10 @@ pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
 
                 // Move to, start new shape fragments with the current styles.
                 if let Some(Vector2D { x, y }) = move_to {
-                    let to: Point2<Twips> = Point2 { x: Twips(*x), y: Twips(*y) };
+                    let to: Point2<Twips> = Point2 {
+                        x: Twips(*x),
+                        y: Twips(*y),
+                    };
                     prev_pos = Some(to);
 
                     // If we didn't start a new shape for the current fill due to a fill
@@ -433,34 +428,27 @@ pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
                             .push_new_shape(LineDirection::Right);
                     }
                 }
-            },
-            ShapeRecord::Edge(
-                shape_records::Edge {
-                    delta,
-                    control_delta,
-                }
-            ) => {
+            }
+            ShapeRecord::Edge(shape_records::Edge {
+                delta,
+                control_delta,
+            }) => {
                 let from = prev_pos.unwrap();
                 let to = Point2 {
                     x: from.x + Twips(delta.x),
-                    y: from.y + Twips(delta.y)
+                    y: from.y + Twips(delta.y),
                 };
                 prev_pos = Some(to);
                 let new_segment = LineSegment {
                     from,
                     to,
-                    ctrl: control_delta.map(|Vector2D { x, y }| {
-                        Point2 {
-                            x: from.x + Twips(x),
-                            y: from.y + Twips(y),
-                        }
+                    ctrl: control_delta.map(|Vector2D { x, y }| Point2 {
+                        x: from.x + Twips(x),
+                        y: from.y + Twips(y),
                     }),
                 };
                 if some_fill_set && !both_fills_same {
-                    for fill_id in [
-                        current_right_fill,
-                        current_left_fill
-                    ].iter() {
+                    for fill_id in [current_right_fill, current_left_fill].iter() {
                         if let Some(fill_id) = fill_id {
                             graphic
                                 .with_fill_style_mut(*fill_id)
@@ -472,8 +460,10 @@ pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
                 } else if both_fills_set_and_same {
                     for (fill_id, direction) in [
                         (current_right_fill, LineDirection::Right),
-                        (current_left_fill, LineDirection::Left)
-                    ].iter() {
+                        (current_left_fill, LineDirection::Left),
+                    ]
+                    .iter()
+                    {
                         // NOTE: If both left and right fill are set the same,
                         // then we don't record the edge as part of the current shape;
                         // it's will just be an internal stroke inside an otherwise solid
@@ -508,7 +498,7 @@ pub(crate) fn decode_shape(shape: &DefineShape) -> GraphicLayers {
 fn find_matches(
     mut first_open_index: usize,
     shapes: &mut Vec<Shape>,
-    reverse: bool
+    reverse: bool,
 ) -> Option<Vec<Shape>> {
     let mut dropped_pieces = None;
     while first_open_index < shapes.len() {
@@ -563,7 +553,11 @@ pub(crate) struct GraphicLayers {
 
 impl GraphicLayers {
     fn new() -> GraphicLayers {
-        GraphicLayers { style_layers: Vec::new(), stroke_layer_offset: None, base_layer_offset: 0 }
+        GraphicLayers {
+            style_layers: Vec::new(),
+            stroke_layer_offset: None,
+            base_layer_offset: 0,
+        }
     }
 
     fn begin_style_group(&mut self) {
@@ -572,22 +566,30 @@ impl GraphicLayers {
     }
 
     fn begin_fill_style(&mut self, fill: Paint) {
-        self.style_layers.push(StyleLayer { fill: PaintOrLine::Paint(fill), shapes: Vec::new() })
+        self.style_layers.push(StyleLayer {
+            fill: PaintOrLine::Paint(fill),
+            shapes: Vec::new(),
+        })
     }
 
     fn begin_line_style(&mut self, line: SwfLineStyle) {
         if self.stroke_layer_offset.is_none() {
             self.stroke_layer_offset = Some(self.style_layers.len());
         }
-        self.style_layers.push(StyleLayer { fill: PaintOrLine::Line(line), shapes: Vec::new() })
+        self.style_layers.push(StyleLayer {
+            fill: PaintOrLine::Line(line),
+            shapes: Vec::new(),
+        })
     }
 
     fn with_fill_style_mut(&mut self, fill_id: usize) -> Option<&mut StyleLayer> {
-        self.style_layers.get_mut(self.base_layer_offset + fill_id - 1)
+        self.style_layers
+            .get_mut(self.base_layer_offset + fill_id - 1)
     }
 
     fn with_line_style_mut(&mut self, line_id: usize) -> Option<&mut StyleLayer> {
-        self.style_layers.get_mut((self.stroke_layer_offset.unwrap() + line_id) - 1)
+        self.style_layers
+            .get_mut((self.stroke_layer_offset.unwrap() + line_id) - 1)
     }
 
     pub(crate) fn layers(&self) -> &Vec<StyleLayer> {
@@ -606,4 +608,3 @@ impl GraphicLayers {
         }
     }
 }
-

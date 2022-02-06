@@ -18,8 +18,8 @@ use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::BuildOptions;
 use pathfinder_resources::embedded::EmbeddedResourceLoader;
 use pathfinder_webgl::WebGlDevice;
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{self, HtmlCanvasElement, WebGl2RenderingContext};
 
 mod utils;
@@ -32,11 +32,12 @@ pub fn rust_main() {
     let canvas = document.get_element_by_id("c").unwrap();
     let canvas: HtmlCanvasElement = canvas.dyn_into::<HtmlCanvasElement>().unwrap();
 
-    let context = canvas.get_context("webgl2")
-                        .unwrap()
-                        .unwrap()
-                        .dyn_into::<WebGl2RenderingContext>()
-                        .unwrap();
+    let context = canvas
+        .get_context("webgl2")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<WebGl2RenderingContext>()
+        .unwrap();
 
     // Get the real size of the window, taking HiDPI into account.
     let framebuffer_size = vec2i(canvas.width() as i32, canvas.height() as i32);

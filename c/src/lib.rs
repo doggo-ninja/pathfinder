@@ -24,9 +24,6 @@ use pathfinder_geometry::transform3d::{Perspective, Transform4F};
 use pathfinder_geometry::vector::{Vector2F, Vector2I};
 use pathfinder_gl::{GLDevice, GLVersion};
 use pathfinder_gpu::Device;
-use pathfinder_resources::ResourceLoader;
-use pathfinder_resources::fs::FilesystemResourceLoader;
-use pathfinder_resources::embedded::EmbeddedResourceLoader;
 use pathfinder_renderer::concurrent::rayon::RayonExecutor;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererLevel};
@@ -34,6 +31,9 @@ use pathfinder_renderer::gpu::options::{RendererMode, RendererOptions};
 use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::{BuildOptions, RenderTransform};
 use pathfinder_renderer::scene::Scene;
+use pathfinder_resources::embedded::EmbeddedResourceLoader;
+use pathfinder_resources::fs::FilesystemResourceLoader;
+use pathfinder_resources::ResourceLoader;
 use pathfinder_simd::default::F32x4;
 use pathfinder_svg::SVGScene;
 use std::ffi::CString;
@@ -55,35 +55,35 @@ use pathfinder_metal::MetalDevice;
 
 // `canvas`
 
-pub const PF_LINE_CAP_BUTT:     u8 = 0;
-pub const PF_LINE_CAP_SQUARE:   u8 = 1;
-pub const PF_LINE_CAP_ROUND:    u8 = 2;
+pub const PF_LINE_CAP_BUTT: u8 = 0;
+pub const PF_LINE_CAP_SQUARE: u8 = 1;
+pub const PF_LINE_CAP_ROUND: u8 = 2;
 
-pub const PF_LINE_JOIN_MITER:   u8 = 0;
-pub const PF_LINE_JOIN_BEVEL:   u8 = 1;
-pub const PF_LINE_JOIN_ROUND:   u8 = 2;
+pub const PF_LINE_JOIN_MITER: u8 = 0;
+pub const PF_LINE_JOIN_BEVEL: u8 = 1;
+pub const PF_LINE_JOIN_ROUND: u8 = 2;
 
-pub const PF_TEXT_ALIGN_LEFT:   u8 = 0;
+pub const PF_TEXT_ALIGN_LEFT: u8 = 0;
 pub const PF_TEXT_ALIGN_CENTER: u8 = 1;
-pub const PF_TEXT_ALIGN_RIGHT:  u8 = 2;
+pub const PF_TEXT_ALIGN_RIGHT: u8 = 2;
 
-pub const PF_TEXT_BASELINE_ALPHABETIC:  u8 = 0;
-pub const PF_TEXT_BASELINE_TOP:         u8 = 1;
-pub const PF_TEXT_BASELINE_HANGING:     u8 = 2;
-pub const PF_TEXT_BASELINE_MIDDLE:      u8 = 3;
+pub const PF_TEXT_BASELINE_ALPHABETIC: u8 = 0;
+pub const PF_TEXT_BASELINE_TOP: u8 = 1;
+pub const PF_TEXT_BASELINE_HANGING: u8 = 2;
+pub const PF_TEXT_BASELINE_MIDDLE: u8 = 3;
 pub const PF_TEXT_BASELINE_IDEOGRAPHIC: u8 = 4;
-pub const PF_TEXT_BASELINE_BOTTOM:      u8 = 5;
+pub const PF_TEXT_BASELINE_BOTTOM: u8 = 5;
 
 // `content`
 
-pub const PF_ARC_DIRECTION_CW:  u8 = 0;
+pub const PF_ARC_DIRECTION_CW: u8 = 0;
 pub const PF_ARC_DIRECTION_CCW: u8 = 1;
 
 // `gl`
 
-pub const PF_GL_VERSION_GL3:    u8 = 0;
-pub const PF_GL_VERSION_GLES3:  u8 = 1;
-pub const PF_GL_VERSION_GL4:    u8 = 2;
+pub const PF_GL_VERSION_GL3: u8 = 0;
+pub const PF_GL_VERSION_GLES3: u8 = 1;
+pub const PF_GL_VERSION_GL4: u8 = 2;
 
 // `renderer`
 
@@ -153,8 +153,10 @@ pub struct PFRectI {
 /// Row-major order.
 #[repr(C)]
 pub struct PFMatrix2x2F {
-    pub m00: f32, pub m01: f32,
-    pub m10: f32, pub m11: f32,
+    pub m00: f32,
+    pub m01: f32,
+    pub m10: f32,
+    pub m11: f32,
 }
 /// Row-major order.
 #[repr(C)]
@@ -165,10 +167,22 @@ pub struct PFTransform2F {
 /// Row-major order.
 #[repr(C)]
 pub struct PFTransform4F {
-    pub m00: f32, pub m01: f32, pub m02: f32, pub m03: f32,
-    pub m10: f32, pub m11: f32, pub m12: f32, pub m13: f32,
-    pub m20: f32, pub m21: f32, pub m22: f32, pub m23: f32,
-    pub m30: f32, pub m31: f32, pub m32: f32, pub m33: f32,
+    pub m00: f32,
+    pub m01: f32,
+    pub m02: f32,
+    pub m03: f32,
+    pub m10: f32,
+    pub m11: f32,
+    pub m12: f32,
+    pub m13: f32,
+    pub m20: f32,
+    pub m21: f32,
+    pub m22: f32,
+    pub m23: f32,
+    pub m30: f32,
+    pub m31: f32,
+    pub m32: f32,
+    pub m33: f32,
 }
 #[repr(C)]
 pub struct PFPerspective {
@@ -179,8 +193,8 @@ pub struct PFPerspective {
 // `gl`
 pub type PFGLDeviceRef = *mut GLDevice;
 pub type PFGLVersion = u8;
-pub type PFGLFunctionLoader = extern "C" fn(name: *const c_char, userdata: *mut c_void)
-                                            -> *const c_void;
+pub type PFGLFunctionLoader =
+    extern "C" fn(name: *const c_char, userdata: *mut c_void) -> *const c_void;
 // `gpu`
 pub type PFGLDestFramebufferRef = *mut DestFramebuffer<GLDevice>;
 pub type PFGLRendererRef = *mut Renderer<GLDevice>;
@@ -224,10 +238,13 @@ pub type PFSVGSceneRef = *mut SVGScene;
 /// This function internally adds a reference to the font context. Therefore, if you created the
 /// font context, you must release it yourself to avoid a leak.
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasCreate(font_context: PFCanvasFontContextRef,
-                                        size: *const PFVector2F)
-                                        -> PFCanvasRef {
-    Box::into_raw(Box::new(Canvas::new((*size).to_rust()).get_context_2d((*font_context).clone())))
+pub unsafe extern "C" fn PFCanvasCreate(
+    font_context: PFCanvasFontContextRef,
+    size: *const PFVector2F,
+) -> PFCanvasRef {
+    Box::into_raw(Box::new(
+        Canvas::new((*size).to_rust()).get_context_2d((*font_context).clone()),
+    ))
 }
 
 #[no_mangle]
@@ -245,18 +262,20 @@ pub unsafe extern "C" fn PFCanvasFontContextCreateWithSystemSource() -> PFCanvas
 /// Note that `font-kit` itself has a C API. You can use this to load fonts from memory with e.g.
 /// `FKHandleCreateWithMemory()`.
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasFontContextCreateWithFonts(fonts: *const FKHandleRef,
-                                                            font_count: usize)
-                                                            -> PFCanvasFontContextRef {
+pub unsafe extern "C" fn PFCanvasFontContextCreateWithFonts(
+    fonts: *const FKHandleRef,
+    font_count: usize,
+) -> PFCanvasFontContextRef {
     let fonts = slice::from_raw_parts(fonts, font_count);
-    Box::into_raw(Box::new(CanvasFontContext::from_fonts(fonts.into_iter().map(|font| {
-        (**font).clone()
-    }))))
+    Box::into_raw(Box::new(CanvasFontContext::from_fonts(
+        fonts.into_iter().map(|font| (**font).clone()),
+    )))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasFontContextAddRef(font_context: PFCanvasFontContextRef)
-                                                   -> PFCanvasFontContextRef {
+pub unsafe extern "C" fn PFCanvasFontContextAddRef(
+    font_context: PFCanvasFontContextRef,
+) -> PFCanvasFontContextRef {
     Box::into_raw(Box::new((*font_context).clone()))
 }
 
@@ -287,28 +306,36 @@ pub unsafe extern "C" fn PFCanvasStrokeRect(canvas: PFCanvasRef, rect: *const PF
 // Drawing text
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasFillText(canvas: PFCanvasRef,
-                                          string: *const c_char,
-                                          string_len: usize,
-                                          position: *const PFVector2F) {
+pub unsafe extern "C" fn PFCanvasFillText(
+    canvas: PFCanvasRef,
+    string: *const c_char,
+    string_len: usize,
+    position: *const PFVector2F,
+) {
     (*canvas).fill_text(to_rust_string(&string, string_len), (*position).to_rust())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasStrokeText(canvas: PFCanvasRef,
-                                            string: *const c_char,
-                                            string_len: usize,
-                                            position: *const PFVector2F) {
+pub unsafe extern "C" fn PFCanvasStrokeText(
+    canvas: PFCanvasRef,
+    string: *const c_char,
+    string_len: usize,
+    position: *const PFVector2F,
+) {
     (*canvas).stroke_text(to_rust_string(&string, string_len), (*position).to_rust())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasMeasureText(canvas: PFCanvasRef,
-                                             string: *const c_char,
-                                             string_len: usize,
-                                             out_text_metrics: *mut PFTextMetrics) {
+pub unsafe extern "C" fn PFCanvasMeasureText(
+    canvas: PFCanvasRef,
+    string: *const c_char,
+    string_len: usize,
+    out_text_metrics: *mut PFTextMetrics,
+) {
     debug_assert!(!out_text_metrics.is_null());
-    *out_text_metrics = (*canvas).measure_text(to_rust_string(&string, string_len)).to_c()
+    *out_text_metrics = (*canvas)
+        .measure_text(to_rust_string(&string, string_len))
+        .to_c()
 }
 
 #[no_mangle]
@@ -319,10 +346,10 @@ pub unsafe extern "C" fn PFCanvasSetLineWidth(canvas: PFCanvasRef, new_line_widt
 #[no_mangle]
 pub unsafe extern "C" fn PFCanvasSetLineCap(canvas: PFCanvasRef, new_line_cap: PFLineCap) {
     (*canvas).set_line_cap(match new_line_cap {
-        PF_LINE_CAP_BUTT   => LineCap::Butt,
+        PF_LINE_CAP_BUTT => LineCap::Butt,
         PF_LINE_CAP_SQUARE => LineCap::Square,
-        PF_LINE_CAP_ROUND  => LineCap::Round,
-        _                  => panic!("Invalid Pathfinder line cap style!"),
+        PF_LINE_CAP_ROUND => LineCap::Round,
+        _ => panic!("Invalid Pathfinder line cap style!"),
     });
 }
 
@@ -332,7 +359,7 @@ pub unsafe extern "C" fn PFCanvasSetLineJoin(canvas: PFCanvasRef, new_line_join:
         PF_LINE_JOIN_MITER => LineJoin::Miter,
         PF_LINE_JOIN_BEVEL => LineJoin::Bevel,
         PF_LINE_JOIN_ROUND => LineJoin::Round,
-        _                  => panic!("Invalid Pathfinder line join style!"),
+        _ => panic!("Invalid Pathfinder line join style!"),
     });
 }
 
@@ -342,15 +369,19 @@ pub unsafe extern "C" fn PFCanvasSetMiterLimit(canvas: PFCanvasRef, new_miter_li
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetLineDash(canvas: PFCanvasRef,
-                                             new_line_dashes: *const f32,
-                                             new_line_dash_count: usize) {
+pub unsafe extern "C" fn PFCanvasSetLineDash(
+    canvas: PFCanvasRef,
+    new_line_dashes: *const f32,
+    new_line_dash_count: usize,
+) {
     (*canvas).set_line_dash(slice::from_raw_parts(new_line_dashes, new_line_dash_count).to_vec())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetTransform(canvas: PFCanvasRef,
-                                              transform: *const PFTransform2F) {
+pub unsafe extern "C" fn PFCanvasSetTransform(
+    canvas: PFCanvasRef,
+    transform: *const PFTransform2F,
+) {
     (*canvas).set_transform(&(*transform).to_rust());
 }
 
@@ -375,9 +406,11 @@ pub unsafe extern "C" fn PFCanvasSetLineDashOffset(canvas: PFCanvasRef, new_offs
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetFontByPostScriptName(canvas: PFCanvasRef,
-                                                         postscript_name: *const c_char,
-                                                         postscript_name_len: usize) {
+pub unsafe extern "C" fn PFCanvasSetFontByPostScriptName(
+    canvas: PFCanvasRef,
+    postscript_name: *const c_char,
+    postscript_name_len: usize,
+) {
     (*canvas).set_font(to_rust_string(&postscript_name, postscript_name_len))
 }
 
@@ -390,14 +423,16 @@ pub unsafe extern "C" fn PFCanvasSetFontSize(canvas: PFCanvasRef, new_font_size:
 pub unsafe extern "C" fn PFCanvasSetTextAlign(canvas: PFCanvasRef, new_text_align: PFTextAlign) {
     (*canvas).set_text_align(match new_text_align {
         PF_TEXT_ALIGN_CENTER => TextAlign::Center,
-        PF_TEXT_ALIGN_RIGHT  => TextAlign::Right,
-        _                    => TextAlign::Left,
+        PF_TEXT_ALIGN_RIGHT => TextAlign::Right,
+        _ => TextAlign::Left,
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetTextBaseline(canvas: PFCanvasRef,
-                                                 new_text_baseline: PFTextBaseline) {
+pub unsafe extern "C" fn PFCanvasSetTextBaseline(
+    canvas: PFCanvasRef,
+    new_text_baseline: PFTextBaseline,
+) {
     (*canvas).set_text_baseline(match new_text_baseline {
         PF_TEXT_BASELINE_ALPHABETIC => TextBaseline::Alphabetic,
         PF_TEXT_BASELINE_TOP => TextBaseline::Top,
@@ -415,8 +450,7 @@ pub unsafe extern "C" fn PFCanvasSetFillStyle(canvas: PFCanvasRef, fill_style: P
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFCanvasSetStrokeStyle(canvas: PFCanvasRef,
-                                                stroke_style: PFFillStyleRef) {
+pub unsafe extern "C" fn PFCanvasSetStrokeStyle(canvas: PFCanvasRef, stroke_style: PFFillStyleRef) {
     // FIXME(pcwalton): Avoid the copy?
     (*canvas).set_stroke_style((*stroke_style).clone())
 }
@@ -462,40 +496,54 @@ pub unsafe extern "C" fn PFPathLineTo(path: PFPathRef, to: *const PFVector2F) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFPathQuadraticCurveTo(path: PFPathRef,
-                                                ctrl: *const PFVector2F,
-                                                to: *const PFVector2F) {
+pub unsafe extern "C" fn PFPathQuadraticCurveTo(
+    path: PFPathRef,
+    ctrl: *const PFVector2F,
+    to: *const PFVector2F,
+) {
     (*path).quadratic_curve_to((*ctrl).to_rust(), (*to).to_rust())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFPathBezierCurveTo(path: PFPathRef,
-                                             ctrl0: *const PFVector2F,
-                                             ctrl1: *const PFVector2F,
-                                             to: *const PFVector2F) {
+pub unsafe extern "C" fn PFPathBezierCurveTo(
+    path: PFPathRef,
+    ctrl0: *const PFVector2F,
+    ctrl1: *const PFVector2F,
+    to: *const PFVector2F,
+) {
     (*path).bezier_curve_to((*ctrl0).to_rust(), (*ctrl1).to_rust(), (*to).to_rust())
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFPathArc(path: PFPathRef,
-                                   center: *const PFVector2F,
-                                   radius: f32,
-                                   start_angle: f32,
-                                   end_angle: f32,
-                                   direction: PFArcDirection) {
+pub unsafe extern "C" fn PFPathArc(
+    path: PFPathRef,
+    center: *const PFVector2F,
+    radius: f32,
+    start_angle: f32,
+    end_angle: f32,
+    direction: PFArcDirection,
+) {
     let direction = match direction {
-        PF_ARC_DIRECTION_CW  => ArcDirection::CW,
+        PF_ARC_DIRECTION_CW => ArcDirection::CW,
         PF_ARC_DIRECTION_CCW => ArcDirection::CCW,
-        _                    => panic!("Invalid Pathfinder arc direction!"),
+        _ => panic!("Invalid Pathfinder arc direction!"),
     };
-    (*path).arc((*center).to_rust(), radius, start_angle, end_angle, direction)
+    (*path).arc(
+        (*center).to_rust(),
+        radius,
+        start_angle,
+        end_angle,
+        direction,
+    )
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFPathArcTo(path: PFPathRef,
-                                     ctrl: *const PFVector2F,
-                                     to: *const PFVector2F,
-                                     radius: f32) {
+pub unsafe extern "C" fn PFPathArcTo(
+    path: PFPathRef,
+    ctrl: *const PFVector2F,
+    to: *const PFVector2F,
+    radius: f32,
+) {
     (*path).arc_to((*ctrl).to_rust(), (*to).to_rust(), radius)
 }
 
@@ -505,13 +553,21 @@ pub unsafe extern "C" fn PFPathRect(path: PFPathRef, rect: *const PFRectF) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFPathEllipse(path: PFPathRef,
-                                       center: *const PFVector2F,
-                                       axes: *const PFVector2F,
-                                       rotation: f32,
-                                       start_angle: f32,
-                                       end_angle: f32) {
-    (*path).ellipse((*center).to_rust(), (*axes).to_rust(), rotation, start_angle, end_angle)
+pub unsafe extern "C" fn PFPathEllipse(
+    path: PFPathRef,
+    center: *const PFVector2F,
+    axes: *const PFVector2F,
+    rotation: f32,
+    start_angle: f32,
+    end_angle: f32,
+) {
+    (*path).ellipse(
+        (*center).to_rust(),
+        (*axes).to_rust(),
+        rotation,
+        start_angle,
+        end_angle,
+    )
 }
 
 #[no_mangle]
@@ -534,21 +590,29 @@ pub unsafe extern "C" fn PFFillStyleDestroy(fill_style: PFFillStyleRef) {
 #[no_mangle]
 pub unsafe extern "C" fn PFEmbeddedResourceLoaderCreate() -> PFResourceLoaderRef {
     let loader = Box::new(EmbeddedResourceLoader::new());
-    Box::into_raw(Box::new(ResourceLoaderWrapper(loader as Box<dyn ResourceLoader>)))
+    Box::into_raw(Box::new(ResourceLoaderWrapper(
+        loader as Box<dyn ResourceLoader>,
+    )))
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn PFFilesystemResourceLoaderLocate() -> PFResourceLoaderRef {
     let loader = Box::new(FilesystemResourceLoader::locate());
-    Box::into_raw(Box::new(ResourceLoaderWrapper(loader as Box<dyn ResourceLoader>)))
+    Box::into_raw(Box::new(ResourceLoaderWrapper(
+        loader as Box<dyn ResourceLoader>,
+    )))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFFilesystemResourceLoaderFromPath(path: *const c_char) -> PFResourceLoaderRef {
+pub unsafe extern "C" fn PFFilesystemResourceLoaderFromPath(
+    path: *const c_char,
+) -> PFResourceLoaderRef {
     let string = to_rust_string(&path, 0);
     let directory = PathBuf::from(string);
     let loader = Box::new(FilesystemResourceLoader { directory });
-    Box::into_raw(Box::new(ResourceLoaderWrapper(loader as Box<dyn ResourceLoader>)))
+    Box::into_raw(Box::new(ResourceLoaderWrapper(
+        loader as Box<dyn ResourceLoader>,
+    )))
 }
 
 #[no_mangle]
@@ -567,12 +631,14 @@ pub unsafe extern "C" fn PFGLLoadWith(loader: PFGLFunctionLoader, userdata: *mut
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFGLDeviceCreate(version: PFGLVersion, default_framebuffer: u32)
-                                          -> PFGLDeviceRef {
+pub unsafe extern "C" fn PFGLDeviceCreate(
+    version: PFGLVersion,
+    default_framebuffer: u32,
+) -> PFGLDeviceRef {
     let version = match version {
-        PF_GL_VERSION_GL3   => GLVersion::GL3,
+        PF_GL_VERSION_GL3 => GLVersion::GL3,
         PF_GL_VERSION_GLES3 => GLVersion::GLES3,
-        PF_GL_VERSION_GL4   => GLVersion::GL4,
+        PF_GL_VERSION_GL4 => GLVersion::GL4,
         _ => panic!("Invalid Pathfinder OpenGL version!"),
     };
     Box::into_raw(Box::new(GLDevice::new(version, default_framebuffer)))
@@ -586,9 +652,12 @@ pub unsafe extern "C" fn PFGLDeviceDestroy(device: PFGLDeviceRef) {
 // `gpu`
 
 #[no_mangle]
-pub unsafe extern "C" fn PFGLDestFramebufferCreateFullWindow(window_size: *const PFVector2I)
-                                                             -> PFGLDestFramebufferRef {
-    Box::into_raw(Box::new(DestFramebuffer::full_window((*window_size).to_rust())))
+pub unsafe extern "C" fn PFGLDestFramebufferCreateFullWindow(
+    window_size: *const PFVector2I,
+) -> PFGLDestFramebufferRef {
+    Box::into_raw(Box::new(DestFramebuffer::full_window(
+        (*window_size).to_rust(),
+    )))
 }
 
 #[no_mangle]
@@ -600,15 +669,18 @@ pub unsafe extern "C" fn PFGLDestFramebufferDestroy(dest_framebuffer: PFGLDestFr
 /// and `dest_framebuffer`. However, it does not take ownership of `resources`; therefore, if you
 /// created the resource loader, you must destroy it yourself to avoid a memory leak.
 #[no_mangle]
-pub unsafe extern "C" fn PFGLRendererCreate(device: PFGLDeviceRef,
-                                            resources: PFResourceLoaderRef,
-                                            mode: *const PFRendererMode,
-                                            options: *const PFRendererOptions)
-                                            -> PFGLRendererRef {
-    Box::into_raw(Box::new(Renderer::new(*Box::from_raw(device),
-                                         &*((*resources).0),
-                                         (*mode).to_rust(),
-                                         (*options).to_rust())))
+pub unsafe extern "C" fn PFGLRendererCreate(
+    device: PFGLDeviceRef,
+    resources: PFResourceLoaderRef,
+    mode: *const PFRendererMode,
+    options: *const PFRendererOptions,
+) -> PFGLRendererRef {
+    Box::into_raw(Box::new(Renderer::new(
+        *Box::from_raw(device),
+        &*((*resources).0),
+        (*mode).to_rust(),
+        (*options).to_rust(),
+    )))
 }
 
 #[no_mangle]
@@ -623,15 +695,19 @@ pub unsafe extern "C" fn PFGLRendererGetDevice(renderer: PFGLRendererRef) -> PFG
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDestFramebufferCreateFullWindow(window_size: *const PFVector2I)
-                                                                -> PFMetalDestFramebufferRef {
-    Box::into_raw(Box::new(DestFramebuffer::full_window((*window_size).to_rust())))
+pub unsafe extern "C" fn PFMetalDestFramebufferCreateFullWindow(
+    window_size: *const PFVector2I,
+) -> PFMetalDestFramebufferRef {
+    Box::into_raw(Box::new(DestFramebuffer::full_window(
+        (*window_size).to_rust(),
+    )))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDestFramebufferDestroy(dest_framebuffer:
-                                                       PFMetalDestFramebufferRef) {
+pub unsafe extern "C" fn PFMetalDestFramebufferDestroy(
+    dest_framebuffer: PFMetalDestFramebufferRef,
+) {
     drop(Box::from_raw(dest_framebuffer))
 }
 
@@ -640,15 +716,18 @@ pub unsafe extern "C" fn PFMetalDestFramebufferDestroy(dest_framebuffer:
 /// created the resource loader, you must destroy it yourself to avoid a memory leak.
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalRendererCreate(device: PFMetalDeviceRef,
-                                               resources: PFResourceLoaderRef,
-                                               mode: *const PFRendererMode,
-                                               options: *const PFRendererOptions)
-                                               -> PFMetalRendererRef {
-    Box::into_raw(Box::new(Renderer::new(*Box::from_raw(device),
-                                         &*((*resources).0),
-                                         (*mode).to_rust(),
-                                         (*options).to_rust())))
+pub unsafe extern "C" fn PFMetalRendererCreate(
+    device: PFMetalDeviceRef,
+    resources: PFResourceLoaderRef,
+    mode: *const PFRendererMode,
+    options: *const PFRendererOptions,
+) -> PFMetalRendererRef {
+    Box::into_raw(Box::new(Renderer::new(
+        *Box::from_raw(device),
+        &*((*resources).0),
+        (*mode).to_rust(),
+        (*options).to_rust(),
+    )))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
@@ -662,17 +741,20 @@ pub unsafe extern "C" fn PFMetalRendererDestroy(renderer: PFMetalRendererRef) {
 /// This reference remains valid as long as the device is alive.
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalRendererGetDevice(renderer: PFMetalRendererRef)
-                                                  -> PFMetalDeviceRef {
+pub unsafe extern "C" fn PFMetalRendererGetDevice(
+    renderer: PFMetalRendererRef,
+) -> PFMetalDeviceRef {
     (*renderer).device_mut()
 }
 
 /// This function does not take ownership of `renderer` or `build_options`. Therefore, if you
 /// created the renderer and/or options, you must destroy them yourself to avoid a leak.
 #[no_mangle]
-pub unsafe extern "C" fn PFSceneProxyBuildAndRenderGL(scene_proxy: PFSceneProxyRef,
-                                                      renderer: PFGLRendererRef,
-                                                      build_options: PFBuildOptionsRef) {
+pub unsafe extern "C" fn PFSceneProxyBuildAndRenderGL(
+    scene_proxy: PFSceneProxyRef,
+    renderer: PFGLRendererRef,
+    build_options: PFBuildOptionsRef,
+) {
     (*scene_proxy).build_and_render(&mut *renderer, (*build_options).clone())
 }
 
@@ -680,9 +762,11 @@ pub unsafe extern "C" fn PFSceneProxyBuildAndRenderGL(scene_proxy: PFSceneProxyR
 /// created the renderer and/or options, you must destroy them yourself to avoid a leak.
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFSceneProxyBuildAndRenderMetal(scene_proxy: PFSceneProxyRef,
-                                                         renderer: PFMetalRendererRef,
-                                                         build_options: PFBuildOptionsRef) {
+pub unsafe extern "C" fn PFSceneProxyBuildAndRenderMetal(
+    scene_proxy: PFSceneProxyRef,
+    renderer: PFMetalRendererRef,
+    build_options: PFBuildOptionsRef,
+) {
     (*scene_proxy).build_and_render(&mut *renderer, (*build_options).clone())
 }
 
@@ -690,38 +774,46 @@ pub unsafe extern "C" fn PFSceneProxyBuildAndRenderMetal(scene_proxy: PFScenePro
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDeviceCreateWithIOSurface(metal_device: &NativeMetalDeviceRef,
-                                                          io_surface: IOSurfaceRef)
-                                                          -> PFMetalDeviceRef {
+pub unsafe extern "C" fn PFMetalDeviceCreateWithIOSurface(
+    metal_device: &NativeMetalDeviceRef,
+    io_surface: IOSurfaceRef,
+) -> PFMetalDeviceRef {
     Box::into_raw(Box::new(MetalDevice::new(metal_device, io_surface)))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDeviceCreateWithDrawable(metal_device: &NativeMetalDeviceRef,
-                                                         ca_drawable: &CoreAnimationDrawableRef)
-                                                         -> PFMetalDeviceRef {
+pub unsafe extern "C" fn PFMetalDeviceCreateWithDrawable(
+    metal_device: &NativeMetalDeviceRef,
+    ca_drawable: &CoreAnimationDrawableRef,
+) -> PFMetalDeviceRef {
     Box::into_raw(Box::new(MetalDevice::new(metal_device, ca_drawable)))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDeviceSwapIOSurface(device: PFMetalDeviceRef,
-                                                    new_io_surface: IOSurfaceRef) {
+pub unsafe extern "C" fn PFMetalDeviceSwapIOSurface(
+    device: PFMetalDeviceRef,
+    new_io_surface: IOSurfaceRef,
+) {
     drop((*device).swap_texture(new_io_surface))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDeviceSwapDrawable(device: PFMetalDeviceRef,
-                                                   new_ca_drawable: &CoreAnimationDrawableRef) {
+pub unsafe extern "C" fn PFMetalDeviceSwapDrawable(
+    device: PFMetalDeviceRef,
+    new_ca_drawable: &CoreAnimationDrawableRef,
+) {
     drop((*device).swap_texture(new_ca_drawable))
 }
 
 #[cfg(all(target_os = "macos", not(feature = "pf-gl")))]
 #[no_mangle]
-pub unsafe extern "C" fn PFMetalDevicePresentDrawable(device: PFMetalDeviceRef,
-                                                      ca_drawable: &CoreAnimationDrawableRef) {
+pub unsafe extern "C" fn PFMetalDevicePresentDrawable(
+    device: PFMetalDeviceRef,
+    ca_drawable: &CoreAnimationDrawableRef,
+) {
     (*device).present_drawable(ca_drawable)
 }
 
@@ -734,15 +826,21 @@ pub unsafe extern "C" fn PFMetalDeviceDestroy(device: PFMetalDeviceRef) {
 // `renderer`
 
 #[no_mangle]
-pub unsafe extern "C" fn PFRenderTransformCreate2D(transform: *const PFTransform2F)
-                                                   -> PFRenderTransformRef {
-    Box::into_raw(Box::new(RenderTransform::Transform2D((*transform).to_rust())))
+pub unsafe extern "C" fn PFRenderTransformCreate2D(
+    transform: *const PFTransform2F,
+) -> PFRenderTransformRef {
+    Box::into_raw(Box::new(RenderTransform::Transform2D(
+        (*transform).to_rust(),
+    )))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFRenderTransformCreatePerspective(perspective: *const PFPerspective)
-                                                            -> PFRenderTransformRef {
-    Box::into_raw(Box::new(RenderTransform::Perspective((*perspective).to_rust())))
+pub unsafe extern "C" fn PFRenderTransformCreatePerspective(
+    perspective: *const PFPerspective,
+) -> PFRenderTransformRef {
+    Box::into_raw(Box::new(RenderTransform::Perspective(
+        (*perspective).to_rust(),
+    )))
 }
 
 #[no_mangle]
@@ -762,20 +860,26 @@ pub unsafe extern "C" fn PFBuildOptionsDestroy(options: PFBuildOptionsRef) {
 
 /// Consumes the transform.
 #[no_mangle]
-pub unsafe extern "C" fn PFBuildOptionsSetTransform(options: PFBuildOptionsRef,
-                                                    transform: PFRenderTransformRef) {
+pub unsafe extern "C" fn PFBuildOptionsSetTransform(
+    options: PFBuildOptionsRef,
+    transform: PFRenderTransformRef,
+) {
     (*options).transform = *Box::from_raw(transform)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFBuildOptionsSetDilation(options: PFBuildOptionsRef,
-                                                   dilation: *const PFVector2F) {
+pub unsafe extern "C" fn PFBuildOptionsSetDilation(
+    options: PFBuildOptionsRef,
+    dilation: *const PFVector2F,
+) {
     (*options).dilation = (*dilation).to_rust()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFBuildOptionsSetSubpixelAAEnabled(options: PFBuildOptionsRef,
-                                                            subpixel_aa_enabled: bool) {
+pub unsafe extern "C" fn PFBuildOptionsSetSubpixelAAEnabled(
+    options: PFBuildOptionsRef,
+    subpixel_aa_enabled: bool,
+) {
     (*options).subpixel_aa_enabled = subpixel_aa_enabled
 }
 
@@ -785,12 +889,15 @@ pub unsafe extern "C" fn PFSceneDestroy(scene: PFSceneRef) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn PFSceneProxyCreateFromSceneAndRayonExecutor(scene: PFSceneRef,
-                                                                     level: PFRendererLevel)
-                                                                     -> PFSceneProxyRef {
-    Box::into_raw(Box::new(SceneProxy::from_scene(*Box::from_raw(scene),
-                                                  to_rust_renderer_level(level),
-                                                  RayonExecutor)))
+pub unsafe extern "C" fn PFSceneProxyCreateFromSceneAndRayonExecutor(
+    scene: PFSceneRef,
+    level: PFRendererLevel,
+) -> PFSceneProxyRef {
+    Box::into_raw(Box::new(SceneProxy::from_scene(
+        *Box::from_raw(scene),
+        to_rust_renderer_level(level),
+        RayonExecutor,
+    )))
 }
 
 #[no_mangle]
@@ -802,8 +909,10 @@ pub unsafe extern "C" fn PFSceneProxyDestroy(scene_proxy: PFSceneProxyRef) {
 
 /// Returns `NULL` on failure.
 #[no_mangle]
-pub unsafe extern "C" fn PFSVGSceneCreateWithMemory(bytes: *const c_char, byte_len: usize)
-                                                    -> PFSVGSceneRef {
+pub unsafe extern "C" fn PFSVGSceneCreateWithMemory(
+    bytes: *const c_char,
+    byte_len: usize,
+) -> PFSVGSceneRef {
     let data = slice::from_raw_parts(bytes as *const _, byte_len);
     let tree = match Tree::from_data(data, &Options::default().to_ref()) {
         Ok(tree) => tree,
@@ -850,7 +959,9 @@ trait TextMetricsExt {
 
 impl TextMetricsExt for TextMetrics {
     fn to_c(&self) -> PFTextMetrics {
-        PFTextMetrics { width: self.width() }
+        PFTextMetrics {
+            width: self.width(),
+        }
     }
 }
 
@@ -866,7 +977,12 @@ impl PFColorF {
 impl PFColorU {
     #[inline]
     pub fn to_rust(&self) -> ColorU {
-        ColorU { r: self.r, g: self.g, b: self.b, a: self.a }
+        ColorU {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a: self.a,
+        }
     }
 }
 
@@ -910,17 +1026,20 @@ impl PFMatrix2x2F {
 impl PFTransform2F {
     #[inline]
     pub fn to_rust(&self) -> Transform2F {
-        Transform2F { matrix: self.matrix.to_rust(), vector: self.vector.to_rust() }
+        Transform2F {
+            matrix: self.matrix.to_rust(),
+            vector: self.vector.to_rust(),
+        }
     }
 }
 
 impl PFTransform4F {
     #[inline]
     pub fn to_rust(&self) -> Transform4F {
-        Transform4F::row_major(self.m00, self.m01, self.m02, self.m03,
-                                self.m10, self.m11, self.m12, self.m13,
-                                self.m20, self.m21, self.m22, self.m23,
-                                self.m30, self.m31, self.m32, self.m33)
+        Transform4F::row_major(
+            self.m00, self.m01, self.m02, self.m03, self.m10, self.m11, self.m12, self.m13,
+            self.m20, self.m21, self.m22, self.m23, self.m30, self.m31, self.m32, self.m33,
+        )
     }
 }
 
@@ -945,7 +1064,10 @@ impl PFRendererMode {
 }
 
 impl PFRendererOptions {
-    pub fn to_rust<D>(&self) -> RendererOptions<D> where D: Device {
+    pub fn to_rust<D>(&self) -> RendererOptions<D>
+    where
+        D: Device,
+    {
         let has_background_color = self.flags & PF_RENDERER_OPTIONS_FLAGS_HAS_BACKGROUND_COLOR;
         let show_debug_ui = (self.flags & PF_RENDERER_OPTIONS_FLAGS_SHOW_DEBUG_UI) != 0;
         unsafe {
@@ -964,8 +1086,8 @@ impl PFRendererOptions {
 
 fn to_rust_renderer_level(level: PFRendererLevel) -> RendererLevel {
     match level {
-        PF_RENDERER_LEVEL_D3D9  => RendererLevel::D3D9,
+        PF_RENDERER_LEVEL_D3D9 => RendererLevel::D3D9,
         PF_RENDERER_LEVEL_D3D11 => RendererLevel::D3D11,
-        _                       => panic!("Invalid Pathfinder renderer level!"),
+        _ => panic!("Invalid Pathfinder renderer level!"),
     }
 }

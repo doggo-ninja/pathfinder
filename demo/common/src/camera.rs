@@ -14,10 +14,10 @@
 // proper.
 
 use crate::window::{OcularTransform, View};
-use pathfinder_geometry::vector::{Vector2I, Vector4F};
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::transform3d::{Perspective, Transform4F};
+use pathfinder_geometry::vector::{Vector2I, Vector4F};
 use std::f32::consts::FRAC_PI_4;
 
 const NEAR_CLIP_PLANE: f32 = 0.01;
@@ -53,8 +53,8 @@ impl Camera {
     }
 
     fn new_2d(view_box: RectF, viewport_size: Vector2I) -> Camera {
-        let scale = i32::min(viewport_size.x(), viewport_size.y()) as f32 *
-            scale_factor_for_view_box(view_box);
+        let scale = i32::min(viewport_size.x(), viewport_size.y()) as f32
+            * scale_factor_for_view_box(view_box);
         let origin = viewport_size.to_f32() * 0.5 - view_box.size() * (scale * 0.5);
         Camera::TwoD(Transform2F::from_scale(scale).translate(origin))
     }
@@ -154,9 +154,10 @@ impl CameraTransform3D {
 
     pub fn to_transform(&self) -> Transform4F {
         let flip = Vector4F::new(1.0, -1.0, 1.0, 1.0);
-        Transform4F::from_scale(flip).translate(-self.position)
-                                     .uniform_scale(2.0 * self.scale)
-                                     .rotate(self.yaw, self.pitch, 0.0)
+        Transform4F::from_scale(flip)
+            .translate(-self.position)
+            .uniform_scale(2.0 * self.scale)
+            .rotate(self.yaw, self.pitch, 0.0)
     }
 }
 

@@ -263,27 +263,51 @@ impl MLResult {
     }
 }
 
-impl Error for MLResult {
-}
+impl Error for MLResult {}
 
 // Functions from the MagicLeap C API
 
 #[cfg(not(feature = "mocked"))]
 extern "C" {
-    pub fn MLGraphicsCreateClientGL(options: *const MLGraphicsOptions, gl_context: MLHandle, graphics_client : &mut MLHandle) -> MLResult;
+    pub fn MLGraphicsCreateClientGL(
+        options: *const MLGraphicsOptions,
+        gl_context: MLHandle,
+        graphics_client: &mut MLHandle,
+    ) -> MLResult;
     pub fn MLGraphicsDestroyClient(graphics_client: *mut MLHandle) -> MLResult;
     pub fn MLHeadTrackingCreate(tracker: *mut MLHandle) -> MLResult;
-    pub fn MLHeadTrackingGetStaticData(head_tracker: MLHandle, data: *mut MLHeadTrackingStaticData) -> MLResult;
+    pub fn MLHeadTrackingGetStaticData(
+        head_tracker: MLHandle,
+        data: *mut MLHeadTrackingStaticData,
+    ) -> MLResult;
     pub fn MLPerceptionGetSnapshot(snapshot: *mut MLSnapshotPtr) -> MLResult;
-    pub fn MLSnapshotGetTransform(snapshot: MLSnapshotPtr, id: *const MLCoordinateFrameUID, transform: *mut MLTransform) -> MLResult;
+    pub fn MLSnapshotGetTransform(
+        snapshot: MLSnapshotPtr,
+        id: *const MLCoordinateFrameUID,
+        transform: *mut MLTransform,
+    ) -> MLResult;
     pub fn MLPerceptionReleaseSnapshot(snapshot: MLSnapshotPtr) -> MLResult;
     pub fn MLLifecycleSetReadyIndication() -> MLResult;
-    pub fn MLGraphicsGetClipExtents(graphics_client: MLHandle, array: *mut MLGraphicsClipExtentsInfoArray) -> MLResult;
-    pub fn MLGraphicsGetRenderTargets(graphics_client: MLHandle, targets: *mut MLGraphicsRenderTargetsInfo) -> MLResult;
+    pub fn MLGraphicsGetClipExtents(
+        graphics_client: MLHandle,
+        array: *mut MLGraphicsClipExtentsInfoArray,
+    ) -> MLResult;
+    pub fn MLGraphicsGetRenderTargets(
+        graphics_client: MLHandle,
+        targets: *mut MLGraphicsRenderTargetsInfo,
+    ) -> MLResult;
     pub fn MLGraphicsInitFrameParams(params: *mut MLGraphicsFrameParams) -> MLResult;
-    pub fn MLGraphicsBeginFrame(graphics_client: MLHandle, params: *const MLGraphicsFrameParams, frame_handle: *mut MLHandle, virtual_camera_array: *mut MLGraphicsVirtualCameraInfoArray) -> MLResult;
+    pub fn MLGraphicsBeginFrame(
+        graphics_client: MLHandle,
+        params: *const MLGraphicsFrameParams,
+        frame_handle: *mut MLHandle,
+        virtual_camera_array: *mut MLGraphicsVirtualCameraInfoArray,
+    ) -> MLResult;
     pub fn MLGraphicsEndFrame(graphics_client: MLHandle, frame_handle: MLHandle) -> MLResult;
-    pub fn MLGraphicsSignalSyncObjectGL(graphics_client: MLHandle, sync_object: MLHandle) -> MLResult;
+    pub fn MLGraphicsSignalSyncObjectGL(
+        graphics_client: MLHandle,
+        sync_object: MLHandle,
+    ) -> MLResult;
     pub fn MLGetResultString(result_code: MLResult) -> *const c_char;
     pub fn MLLoggingLogLevelIsEnabled(lvl: MLLogLevel) -> bool;
     pub fn MLLoggingLog(lvl: MLLogLevel, tag: *const c_char, message: *const c_char);

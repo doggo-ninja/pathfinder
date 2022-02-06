@@ -10,20 +10,20 @@
 
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::transform2d::Transform2F;
-use pathfinder_geometry::vector::{Vector2F, vec2f, vec2i};
+use pathfinder_geometry::vector::{vec2f, vec2i, Vector2F};
 use pathfinder_gl::{GLDevice, GLVersion};
 use pathfinder_renderer::concurrent::rayon::RayonExecutor;
 use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
-use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererMode, RendererOptions};
-use pathfinder_renderer::options::{RenderTransform, BuildOptions};
-use pathfinder_resources::ResourceLoader;
+use pathfinder_renderer::gpu::renderer::Renderer;
+use pathfinder_renderer::options::{BuildOptions, RenderTransform};
+use pathfinder_renderer::scene::Scene;
 use pathfinder_resources::embedded::EmbeddedResourceLoader;
+use pathfinder_resources::ResourceLoader;
+use pathfinder_swf::{draw_paths_into_scene, process_swf_tags};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
-use pathfinder_renderer::scene::Scene;
-use pathfinder_swf::{draw_paths_into_scene, process_swf_tags};
 use std::env;
 use std::fs::read;
 
@@ -35,8 +35,8 @@ fn main() {
         match read(path) {
             Ok(bytes) => {
                 swf_bytes = bytes;
-            },
-            Err(e) => panic!("{}", e)
+            }
+            Err(e) => panic!("{}", e),
         }
     } else {
         // NOTE(jon): This is a version of the ghostscript tiger graphic flattened to a single
@@ -83,13 +83,21 @@ fn main() {
 
     // Open a window.
     let window_size = vec2i(stage.width(), stage.height());
-    let window = video.window("Minimal example", window_size.x() as u32, window_size.y() as u32)
+    let window = video
+        .window(
+            "Minimal example",
+            window_size.x() as u32,
+            window_size.y() as u32,
+        )
         .opengl()
         .allow_highdpi()
         .build()
         .unwrap();
 
-    let pixel_size = vec2i(window.drawable_size().0 as i32, window.drawable_size().1 as i32);
+    let pixel_size = vec2i(
+        window.drawable_size().0 as i32,
+        window.drawable_size().1 as i32,
+    );
     let device_pixel_ratio = pixel_size.x() as f32 / window_size.x() as f32;
 
     // Create the GL context, and make it current.
@@ -109,9 +117,10 @@ fn main() {
 
     // Clear to swf stage background color.
     let mut scene = Scene::new();
-    scene.set_view_box(RectF::new(Vector2F::zero(),
-                                  vec2f(stage.width() as f32,
-                                        stage.height() as f32) * device_pixel_ratio));
+    scene.set_view_box(RectF::new(
+        Vector2F::zero(),
+        vec2f(stage.width() as f32, stage.height() as f32) * device_pixel_ratio,
+    ));
     draw_paths_into_scene(&library, &mut scene);
 
     // Render the canvas to screen.
@@ -126,7 +135,11 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
     loop {
         match event_pump.wait_event() {
-            Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => return,
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => return,
             _ => {}
         }
     }

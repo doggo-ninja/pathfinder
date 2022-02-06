@@ -18,8 +18,8 @@ use pathfinder_renderer::concurrent::scene_proxy::SceneProxy;
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererMode, RendererOptions};
 use pathfinder_renderer::gpu::renderer::Renderer;
 use pathfinder_renderer::options::BuildOptions;
-use pathfinder_resources::ResourceLoader;
 use pathfinder_resources::fs::FilesystemResourceLoader;
+use pathfinder_resources::ResourceLoader;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
@@ -38,10 +38,15 @@ fn main() {
 
     // Open a window.
     let window_size = vec2i(640, 480);
-    let window = video.window("Text example", window_size.x() as u32, window_size.y() as u32)
-                      .opengl()
-                      .build()
-                      .unwrap();
+    let window = video
+        .window(
+            "Text example",
+            window_size.x() as u32,
+            window_size.y() as u32,
+        )
+        .opengl()
+        .build()
+        .unwrap();
 
     // Create the GL context, and make it current.
     let gl_context = window.gl_create_context().unwrap();
@@ -68,10 +73,18 @@ fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
     loop {
         match event_pump.wait_event() {
-            Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => return,
-            Event::Window { win_event: WindowEvent::Exposed, .. } => {
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => return,
+            Event::Window {
+                win_event: WindowEvent::Exposed,
+                ..
+            } => {
                 // Make a canvas.
-                let mut canvas = Canvas::new(window_size.to_f32()).get_context_2d(font_context.clone());
+                let mut canvas =
+                    Canvas::new(window_size.to_f32()).get_context_2d(font_context.clone());
 
                 // Draw the text.
                 canvas.set_font("Overpass-Regular");
@@ -81,12 +94,14 @@ fn main() {
                 canvas.stroke_text("Goodbye Pathfinder!", vec2f(608.0, 464.0));
 
                 // Render the canvas to screen.
-                let mut scene = SceneProxy::from_scene(canvas.into_canvas().into_scene(),
-                                                       renderer.mode().level,
-                                                       RayonExecutor);
+                let mut scene = SceneProxy::from_scene(
+                    canvas.into_canvas().into_scene(),
+                    renderer.mode().level,
+                    RayonExecutor,
+                );
                 scene.build_and_render(&mut renderer, BuildOptions::default());
                 window.gl_swap_window();
-            },
+            }
             _ => {}
         }
     }

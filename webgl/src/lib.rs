@@ -13,7 +13,7 @@
 #[macro_use]
 extern crate log;
 
-use js_sys::{Uint8Array, Uint16Array, Float32Array, Object};
+use js_sys::{Float32Array, Object, Uint16Array, Uint8Array};
 use pathfinder_geometry::rect::RectI;
 use pathfinder_geometry::vector::Vector2I;
 use pathfinder_gpu::{BlendFactor, BlendOp, BufferData, BufferTarget, BufferUploadMode, ClearOps};
@@ -186,12 +186,16 @@ impl WebGlDevice {
             self.clear(&render_state.options.clear_ops);
         }
 
-        self.context.use_program(Some(&render_state.program.gl_program));
-        self.context.bind_vertex_array(Some(&render_state.vertex_array.gl_vertex_array));
+        self.context
+            .use_program(Some(&render_state.program.gl_program));
+        self.context
+            .bind_vertex_array(Some(&render_state.vertex_array.gl_vertex_array));
 
-        self.bind_textures_and_images(&render_state.program,
-                                      &render_state.textures,
-                                      &render_state.images);
+        self.bind_textures_and_images(
+            &render_state.program,
+            &render_state.textures,
+            &render_state.images,
+        );
 
         for (uniform, data) in render_state.uniforms {
             self.set_uniform(uniform, data);
@@ -200,17 +204,19 @@ impl WebGlDevice {
     }
 
     fn bind_textures_and_images(
-            &self,
-            program: &WebGlProgram,
-            texture_bindings: &[TextureBinding<WebGlTextureParameter, WebGlTexture>],
-            _: &[ImageBinding<(), WebGlTexture>]) {
+        &self,
+        program: &WebGlProgram,
+        texture_bindings: &[TextureBinding<WebGlTextureParameter, WebGlTexture>],
+        _: &[ImageBinding<(), WebGlTexture>],
+    ) {
         for &(texture_parameter, texture) in texture_bindings {
             self.bind_texture(texture, texture_parameter.texture_unit);
         }
 
         let parameters = program.parameters.borrow();
         for (texture_unit, uniform) in parameters.textures.iter().enumerate() {
-            self.context.uniform1i(uniform.location.as_ref(), texture_unit as i32);
+            self.context
+                .uniform1i(uniform.location.as_ref(), texture_unit as i32);
             self.ck();
         }
     }
@@ -486,9 +492,7 @@ impl Device for WebGlDevice {
         size: Vector2I,
         data_ref: TextureDataRef,
     ) -> WebGlTexture {
-        let data = unsafe {
-            check_and_extract_data(data_ref, size, format)
-        };
+        let data = unsafe { check_and_extract_data(data_ref, size, format) };
 
         let texture = self.context.create_texture().unwrap();
         let texture = WebGlTexture {
@@ -568,7 +572,10 @@ impl Device for WebGlDevice {
             .create_program()
             .expect("unable to create program object");
         match shaders {
-            ProgramKind::Raster { ref vertex, ref fragment } => {
+            ProgramKind::Raster {
+                ref vertex,
+                ref fragment,
+            } => {
                 self.context.attach_shader(&gl_program, &vertex.gl_shader);
                 self.context.attach_shader(&gl_program, &fragment.gl_shader);
             }
@@ -622,7 +629,9 @@ impl Device for WebGlDevice {
 
     fn get_uniform(&self, program: &WebGlProgram, name: &str) -> WebGlUniform {
         let name = format!("u{}", name);
-        let location = self.context.get_uniform_location(&program.gl_program, &name);
+        let location = self
+            .context
+            .get_uniform_location(&program.gl_program, &name);
         self.ck();
         WebGlUniform { location: location }
     }
@@ -638,7 +647,10 @@ impl Device for WebGlDevice {
                 index
             }
         };
-        WebGlTextureParameter { uniform, texture_unit: index as u32 }
+        WebGlTextureParameter {
+            uniform,
+            texture_unit: index as u32,
+        }
     }
 
     fn get_image_parameter(&self, _: &WebGlProgram, _: &str) {
@@ -744,12 +756,7 @@ impl Device for WebGlDevice {
         }
     }
 
-    fn allocate_buffer<T>(
-        &self,
-        buffer: &WebGlBuffer,
-        data: BufferData<T>,
-        target: BufferTarget,
-    ) {
+    fn allocate_buffer<T>(&self, buffer: &WebGlBuffer, data: BufferData<T>, target: BufferTarget) {
         let target = match target {
             BufferTarget::Vertex => WebGl::ARRAY_BUFFER,
             BufferTarget::Index => WebGl::ELEMENT_ARRAY_BUFFER,
@@ -770,16 +777,22 @@ impl Device for WebGlDevice {
         }
     }
 
-    fn upload_to_buffer<T>(&self,
-                           buffer: &Self::Buffer,
-                           position: usize,
-                           data: &[T],
-                           target: BufferTarget) {
+    fn upload_to_buffer<T>(
+        &self,
+        buffer: &Self::Buffer,
+        position: usize,
+        data: &[T],
+        target: BufferTarget,
+    ) {
         let target = target.to_gl_target();
-        self.context.bind_buffer(target, Some(&buffer.buffer)); self.ck();
-        self.context.buffer_sub_data_with_i32_and_u8_array(target,
-                                                            position as i32,
-                                                            slice_to_u8(data)); self.ck();
+        self.context.bind_buffer(target, Some(&buffer.buffer));
+        self.ck();
+        self.context.buffer_sub_data_with_i32_and_u8_array(
+            target,
+            position as i32,
+            slice_to_u8(data),
+        );
+        self.ck();
     }
 
     #[inline]
@@ -794,44 +807,46 @@ impl Device for WebGlDevice {
 
     fn set_texture_sampling_mode(&self, texture: &Self::Texture, flags: TextureSamplingFlags) {
         self.bind_texture(texture, 0);
-        self.context
-            .tex_parameteri(WebGl::TEXTURE_2D,
-                            WebGl::TEXTURE_MIN_FILTER,
-                            if flags.contains(TextureSamplingFlags::NEAREST_MIN) {
-                                WebGl::NEAREST as i32
-                            } else {
-                                WebGl::LINEAR as i32
-                            });
-        self.context
-            .tex_parameteri(WebGl::TEXTURE_2D,
-                            WebGl::TEXTURE_MAG_FILTER,
-                            if flags.contains(TextureSamplingFlags::NEAREST_MAG) {
-                                WebGl::NEAREST as i32
-                            } else {
-                                WebGl::LINEAR as i32
-                            });
-        self.context
-            .tex_parameteri(WebGl::TEXTURE_2D,
-                            WebGl::TEXTURE_WRAP_S,
-                            if flags.contains(TextureSamplingFlags::REPEAT_U) {
-                                WebGl::REPEAT as i32
-                            } else {
-                                WebGl::CLAMP_TO_EDGE as i32
-                            });
-        self.context
-            .tex_parameteri(WebGl::TEXTURE_2D,
-                            WebGl::TEXTURE_WRAP_T,
-                            if flags.contains(TextureSamplingFlags::REPEAT_V) {
-                                WebGl::REPEAT as i32
-                            } else {
-                                WebGl::CLAMP_TO_EDGE as i32
-                            });
+        self.context.tex_parameteri(
+            WebGl::TEXTURE_2D,
+            WebGl::TEXTURE_MIN_FILTER,
+            if flags.contains(TextureSamplingFlags::NEAREST_MIN) {
+                WebGl::NEAREST as i32
+            } else {
+                WebGl::LINEAR as i32
+            },
+        );
+        self.context.tex_parameteri(
+            WebGl::TEXTURE_2D,
+            WebGl::TEXTURE_MAG_FILTER,
+            if flags.contains(TextureSamplingFlags::NEAREST_MAG) {
+                WebGl::NEAREST as i32
+            } else {
+                WebGl::LINEAR as i32
+            },
+        );
+        self.context.tex_parameteri(
+            WebGl::TEXTURE_2D,
+            WebGl::TEXTURE_WRAP_S,
+            if flags.contains(TextureSamplingFlags::REPEAT_U) {
+                WebGl::REPEAT as i32
+            } else {
+                WebGl::CLAMP_TO_EDGE as i32
+            },
+        );
+        self.context.tex_parameteri(
+            WebGl::TEXTURE_2D,
+            WebGl::TEXTURE_WRAP_T,
+            if flags.contains(TextureSamplingFlags::REPEAT_V) {
+                WebGl::REPEAT as i32
+            } else {
+                WebGl::CLAMP_TO_EDGE as i32
+            },
+        );
     }
 
     fn upload_to_texture(&self, texture: &WebGlTexture, rect: RectI, data_ref: TextureDataRef) {
-        let data = unsafe {
-            check_and_extract_data(data_ref, rect.size(), texture.format)
-        };
+        let data = unsafe { check_and_extract_data(data_ref, rect.size(), texture.format) };
         assert!(rect.size().x() >= 0);
         assert!(rect.size().y() >= 0);
         assert!(rect.max_x() <= texture.size.x());

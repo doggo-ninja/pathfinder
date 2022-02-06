@@ -35,7 +35,10 @@ impl DemoExecutor {
 
 impl Executor for DemoExecutor {
     fn build_vector<T, F>(&self, length: usize, builder: F) -> Vec<T>
-                          where T: Send, F: Fn(usize) -> T + Send + Sync {
+    where
+        T: Send,
+        F: Fn(usize) -> T + Send + Sync,
+    {
         if self.sequential_mode {
             SequentialExecutor.build_vector(length, builder)
         } else {

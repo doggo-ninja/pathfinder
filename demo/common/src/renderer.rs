@@ -15,11 +15,11 @@ use crate::window::{View, Window};
 use crate::{BackgroundColor, DemoApp, UIVisibility};
 use image::ColorType;
 use pathfinder_color::{ColorF, ColorU};
-use pathfinder_gpu::{ClearOps, DepthFunc, DepthState, Device, Primitive, RenderOptions};
-use pathfinder_gpu::{RenderState, RenderTarget, TextureData, TextureFormat, UniformData};
 use pathfinder_geometry::rect::RectI;
 use pathfinder_geometry::transform3d::Transform4F;
 use pathfinder_geometry::vector::{Vector2I, Vector4F};
+use pathfinder_gpu::{ClearOps, DepthFunc, DepthState, Device, Primitive, RenderOptions};
+use pathfinder_gpu::{RenderState, RenderTarget, TextureData, TextureFormat, UniformData};
 use pathfinder_renderer::gpu::options::{DestFramebuffer, RendererOptions};
 use pathfinder_renderer::options::RenderTransform;
 use std::mem;
@@ -41,7 +41,10 @@ const GROUND_LINE_COLOR: ColorU = ColorU {
 
 const GRIDLINE_COUNT: i32 = 10;
 
-impl<W> DemoApp<W> where W: Window {
+impl<W> DemoApp<W>
+where
+    W: Window,
+{
     pub fn prepare_frame_rendering(&mut self) -> u32 {
         // Make the context current.
         let view = self.ui_model.mode.view(0);
@@ -62,9 +65,10 @@ impl<W> DemoApp<W> where W: Window {
                 let viewport = self.window.viewport(View::Stereo(0));
                 if self.scene_framebuffer.is_none()
                     || self.renderer.device().texture_size(
-                        &self.renderer.device().framebuffer_texture(self.scene_framebuffer
-                                                                        .as_ref()
-                                                                        .unwrap()),
+                        &self
+                            .renderer
+                            .device()
+                            .framebuffer_texture(self.scene_framebuffer.as_ref().unwrap()),
                     ) != viewport.size()
                 {
                     let scene_texture = self
@@ -120,9 +124,9 @@ impl<W> DemoApp<W> where W: Window {
                 },
                 ..*self.renderer.options()
             };
-            if let DestFramebuffer::Other(scene_framebuffer) = mem::replace(self.renderer
-                                                                                .options_mut(),
-                                                                            new_options).dest {
+            if let DestFramebuffer::Other(scene_framebuffer) =
+                mem::replace(self.renderer.options_mut(), new_options).dest
+            {
                 self.scene_framebuffer = Some(scene_framebuffer);
             }
         }
@@ -165,22 +169,25 @@ impl<W> DemoApp<W> where W: Window {
         self.draw_environment(render_scene_index);
 
         let scene_framebuffer = self.scene_framebuffer.as_ref().unwrap();
-        let scene_texture = self.renderer.device().framebuffer_texture(scene_framebuffer);
+        let scene_texture = self
+            .renderer
+            .device()
+            .framebuffer_texture(scene_framebuffer);
 
         let mut quad_scale = self.scene_metadata.view_box.size().to_4d();
         quad_scale.set_z(1.0);
         let quad_scale_transform = Transform4F::from_scale(quad_scale);
 
-        let scene_transform_matrix = scene_transform.perspective *
-            scene_transform.modelview_to_eye *
-            modelview_transform.to_transform() *
-            quad_scale_transform;
+        let scene_transform_matrix = scene_transform.perspective
+            * scene_transform.modelview_to_eye
+            * modelview_transform.to_transform()
+            * quad_scale_transform;
 
         let eye_transform = &eye_transforms[render_scene_index as usize];
-        let eye_transform_matrix = eye_transform.perspective *
-            eye_transform.modelview_to_eye *
-            modelview_transform.to_transform() *
-            quad_scale_transform;
+        let eye_transform_matrix = eye_transform.perspective
+            * eye_transform.modelview_to_eye
+            * modelview_transform.to_transform()
+            * quad_scale_transform;
 
         debug!(
             "eye transform({}).modelview_to_eye={:?}",
@@ -220,8 +227,8 @@ impl<W> DemoApp<W> where W: Window {
         let base_transform = perspective.transform * Transform4F::from_translation(offset);
 
         // Fill ground.
-        let transform = base_transform *
-            Transform4F::from_scale(Vector4F::new(ground_scale, 1.0, ground_scale, 1.0));
+        let transform = base_transform
+            * Transform4F::from_scale(Vector4F::new(ground_scale, 1.0, ground_scale, 1.0));
 
         // Don't clear the first scene after drawing it.
         let clear_color = if render_scene_index == 0 {
@@ -230,30 +237,49 @@ impl<W> DemoApp<W> where W: Window {
             None
         };
 
-        self.renderer.device().draw_elements(6, &RenderState {
-            target: &self.renderer.draw_render_target(),
-            program: &self.ground_program.program,
-            vertex_array: &self.ground_vertex_array.vertex_array,
-            primitive: Primitive::Triangles,
-            textures: &[],
-            images: &[],
-            storage_buffers: &[],
-            uniforms: &[
-                (&self.ground_program.transform_uniform,
-                 UniformData::from_transform_3d(&transform)),
-                (&self.ground_program.ground_color_uniform,
-                 UniformData::Vec4(GROUND_SOLID_COLOR.to_f32().0)),
-                (&self.ground_program.gridline_color_uniform,
-                 UniformData::Vec4(GROUND_LINE_COLOR.to_f32().0)),
-                (&self.ground_program.gridline_count_uniform, UniformData::Int(GRIDLINE_COUNT)),
-            ],
-            viewport: self.renderer.draw_viewport(),
-            options: RenderOptions {
-                depth: Some(DepthState { func: DepthFunc::Less, write: true }),
-                clear_ops: ClearOps { color: clear_color, depth: Some(1.0), stencil: Some(0) },
-                ..RenderOptions::default()
+        self.renderer.device().draw_elements(
+            6,
+            &RenderState {
+                target: &self.renderer.draw_render_target(),
+                program: &self.ground_program.program,
+                vertex_array: &self.ground_vertex_array.vertex_array,
+                primitive: Primitive::Triangles,
+                textures: &[],
+                images: &[],
+                storage_buffers: &[],
+                uniforms: &[
+                    (
+                        &self.ground_program.transform_uniform,
+                        UniformData::from_transform_3d(&transform),
+                    ),
+                    (
+                        &self.ground_program.ground_color_uniform,
+                        UniformData::Vec4(GROUND_SOLID_COLOR.to_f32().0),
+                    ),
+                    (
+                        &self.ground_program.gridline_color_uniform,
+                        UniformData::Vec4(GROUND_LINE_COLOR.to_f32().0),
+                    ),
+                    (
+                        &self.ground_program.gridline_count_uniform,
+                        UniformData::Int(GRIDLINE_COUNT),
+                    ),
+                ],
+                viewport: self.renderer.draw_viewport(),
+                options: RenderOptions {
+                    depth: Some(DepthState {
+                        func: DepthFunc::Less,
+                        write: true,
+                    }),
+                    clear_ops: ClearOps {
+                        color: clear_color,
+                        depth: Some(1.0),
+                        stencil: Some(0),
+                    },
+                    ..RenderOptions::default()
+                },
             },
-        });
+        );
     }
 
     #[allow(deprecated)]
@@ -271,9 +297,15 @@ impl<W> DemoApp<W> where W: Window {
     pub fn take_raster_screenshot(&mut self, path: PathBuf) {
         let drawable_size = self.window_size.device_size();
         let viewport = RectI::new(Vector2I::default(), drawable_size);
-        let texture_data_receiver =
-            self.renderer.device().read_pixels(&RenderTarget::Default, viewport);
-        let pixels = match self.renderer.device().recv_texture_data(&texture_data_receiver) {
+        let texture_data_receiver = self
+            .renderer
+            .device()
+            .read_pixels(&RenderTarget::Default, viewport);
+        let pixels = match self
+            .renderer
+            .device()
+            .recv_texture_data(&texture_data_receiver)
+        {
             TextureData::U8(pixels) => pixels,
             _ => panic!("Unexpected pixel format for default framebuffer!"),
         };

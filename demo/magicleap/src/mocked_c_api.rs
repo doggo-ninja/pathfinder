@@ -28,7 +28,11 @@ use crate::c_api::MLSnapshotPtr;
 use crate::c_api::MLTransform;
 use std::os::raw::c_char;
 
-pub unsafe fn MLGraphicsCreateClientGL(options: *const MLGraphicsOptions, gl_context: MLHandle, graphics_client : &mut MLHandle) -> MLResult {
+pub unsafe fn MLGraphicsCreateClientGL(
+    options: *const MLGraphicsOptions,
+    gl_context: MLHandle,
+    graphics_client: &mut MLHandle,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -40,7 +44,10 @@ pub unsafe fn MLHeadTrackingCreate(tracker: *mut MLHandle) -> MLResult {
     unimplemented!()
 }
 
-pub unsafe fn MLHeadTrackingGetStaticData(head_tracker: MLHandle, data: *mut MLHeadTrackingStaticData) -> MLResult {
+pub unsafe fn MLHeadTrackingGetStaticData(
+    head_tracker: MLHandle,
+    data: *mut MLHeadTrackingStaticData,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -48,7 +55,11 @@ pub unsafe fn MLPerceptionGetSnapshot(snapshot: *mut MLSnapshotPtr) -> MLResult 
     unimplemented!()
 }
 
-pub unsafe fn MLSnapshotGetTransform(snapshot: MLSnapshotPtr, id: *const MLCoordinateFrameUID, transform: *mut MLTransform) -> MLResult {
+pub unsafe fn MLSnapshotGetTransform(
+    snapshot: MLSnapshotPtr,
+    id: *const MLCoordinateFrameUID,
+    transform: *mut MLTransform,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -60,11 +71,17 @@ pub unsafe fn MLLifecycleSetReadyIndication() -> MLResult {
     unimplemented!()
 }
 
-pub unsafe fn MLGraphicsGetClipExtents(graphics_client: MLHandle, array: *mut MLGraphicsClipExtentsInfoArray) -> MLResult {
+pub unsafe fn MLGraphicsGetClipExtents(
+    graphics_client: MLHandle,
+    array: *mut MLGraphicsClipExtentsInfoArray,
+) -> MLResult {
     unimplemented!()
 }
 
-pub unsafe fn MLGraphicsGetRenderTargets(graphics_client: MLHandle, targets: *mut MLGraphicsRenderTargetsInfo) -> MLResult {
+pub unsafe fn MLGraphicsGetRenderTargets(
+    graphics_client: MLHandle,
+    targets: *mut MLGraphicsRenderTargetsInfo,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -72,7 +89,12 @@ pub unsafe fn MLGraphicsInitFrameParams(params: *mut MLGraphicsFrameParams) -> M
     unimplemented!()
 }
 
-pub unsafe fn MLGraphicsBeginFrame(graphics_client: MLHandle, params: *const MLGraphicsFrameParams, frame_handle: *mut MLHandle, virtual_camera_array: *mut MLGraphicsVirtualCameraInfoArray) -> MLResult {
+pub unsafe fn MLGraphicsBeginFrame(
+    graphics_client: MLHandle,
+    params: *const MLGraphicsFrameParams,
+    frame_handle: *mut MLHandle,
+    virtual_camera_array: *mut MLGraphicsVirtualCameraInfoArray,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -80,7 +102,10 @@ pub unsafe fn MLGraphicsEndFrame(graphics_client: MLHandle, frame_handle: MLHand
     unimplemented!()
 }
 
-pub unsafe fn MLGraphicsSignalSyncObjectGL(graphics_client: MLHandle, sync_object: MLHandle) -> MLResult {
+pub unsafe fn MLGraphicsSignalSyncObjectGL(
+    graphics_client: MLHandle,
+    sync_object: MLHandle,
+) -> MLResult {
     unimplemented!()
 }
 
@@ -95,4 +120,3 @@ pub unsafe fn MLLoggingLogLevelIsEnabled(lvl: MLLogLevel) -> bool {
 pub unsafe fn MLLoggingLog(lvl: MLLogLevel, tag: *const c_char, message: *const c_char) {
     unimplemented!()
 }
-

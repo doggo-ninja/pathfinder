@@ -16,15 +16,15 @@ use pathfinder_geometry::line_segment::LineSegment2F;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::util::EPSILON;
-use pathfinder_geometry::vector::{Vector2F, vec2f};
+use pathfinder_geometry::vector::{vec2f, Vector2F};
 use std::f32;
 
 const TOLERANCE: f32 = 0.01;
 
 /// Strokes an outline with a stroke style to produce a new outline.
-/// 
+///
 /// An example of use:
-/// 
+///
 /// ```norun
 /// let mut stroke_to_fill = OutlineStrokeToFill::new(&input_outline, StrokeStyle::default());
 /// stroke_to_fill.offset();
@@ -80,7 +80,11 @@ impl<'a> OutlineStrokeToFill<'a> {
     /// given stroke style.
     #[inline]
     pub fn new(input: &Outline, style: StrokeStyle) -> OutlineStrokeToFill {
-        OutlineStrokeToFill { input, output: Outline::new(), style }
+        OutlineStrokeToFill {
+            input,
+            output: Outline::new(),
+            style,
+        }
     }
 
     /// Performs the stroke operation.
@@ -88,18 +92,22 @@ impl<'a> OutlineStrokeToFill<'a> {
         let mut new_contours = vec![];
         for input in &self.input.contours {
             let closed = input.closed;
-            let mut stroker = ContourStrokeToFill::new(input,
-                                                       Contour::new(),
-                                                       self.style.line_width * 0.5,
-                                                       self.style.line_join);
+            let mut stroker = ContourStrokeToFill::new(
+                input,
+                Contour::new(),
+                self.style.line_width * 0.5,
+                self.style.line_join,
+            );
 
             stroker.offset_forward();
             if closed {
                 self.push_stroked_contour(&mut new_contours, stroker, true);
-                stroker = ContourStrokeToFill::new(input,
-                                                   Contour::new(),
-                                                   self.style.line_width * 0.5,
-                                                   self.style.line_join);
+                stroker = ContourStrokeToFill::new(
+                    input,
+                    Contour::new(),
+                    self.style.line_width * 0.5,
+                    self.style.line_join,
+                );
             } else {
                 self.add_cap(&mut stroker.output);
             }
@@ -113,7 +121,9 @@ impl<'a> OutlineStrokeToFill<'a> {
         }
 
         let mut new_bounds = None;
-        new_contours.iter().for_each(|contour| contour.update_bounds(&mut new_bounds));
+        new_contours
+            .iter()
+            .for_each(|contour| contour.update_bounds(&mut new_bounds));
 
         self.output.contours = new_contours;
         self.output.bounds = new_bounds.unwrap_or_else(|| RectF::default());
@@ -125,18 +135,22 @@ impl<'a> OutlineStrokeToFill<'a> {
         self.output
     }
 
-    fn push_stroked_contour(&mut self,
-                            new_contours: &mut Vec<Contour>,
-                            mut stroker: ContourStrokeToFill,
-                            closed: bool) {
+    fn push_stroked_contour(
+        &mut self,
+        new_contours: &mut Vec<Contour>,
+        mut stroker: ContourStrokeToFill,
+        closed: bool,
+    ) {
         // Add join if necessary.
         if closed && stroker.output.might_need_join(self.style.line_join) {
             let (p1, p0) = (stroker.output.position_of(1), stroker.output.position_of(0));
             let final_segment = LineSegment2F::new(p1, p0);
-            stroker.output.add_join(self.style.line_width * 0.5,
-                                    self.style.line_join,
-                                    stroker.input.position_of(0),
-                                    final_segment);
+            stroker.output.add_join(
+                self.style.line_width * 0.5,
+                self.style.line_join,
+                stroker.input.position_of(0),
+                final_segment,
+            );
         }
 
         stroker.output.closed = true;
@@ -145,7 +159,7 @@ impl<'a> OutlineStrokeToFill<'a> {
 
     fn add_cap(&mut self, contour: &mut Contour) {
         if self.style.line_cap == LineCap::Butt || contour.len() < 2 {
-            return
+            return;
         }
 
         let width = self.style.line_width;
@@ -203,14 +217,23 @@ struct ContourStrokeToFill<'a> {
 impl<'a> ContourStrokeToFill<'a> {
     #[inline]
     fn new(input: &Contour, output: Contour, radius: f32, join: LineJoin) -> ContourStrokeToFill {
-        ContourStrokeToFill { input, output, radius, join }
+        ContourStrokeToFill {
+            input,
+            output,
+            radius,
+            join,
+        }
     }
 
     fn offset_forward(&mut self) {
         for (segment_index, segment) in self.input.iter(ContourIterFlags::empty()).enumerate() {
             // FIXME(pcwalton): We negate the radius here so that round end caps can be drawn
             // clockwise. Of course, we should just implement anticlockwise arcs to begin with...
-            let join = if segment_index == 0 { LineJoin::Bevel } else { self.join };
+            let join = if segment_index == 0 {
+                LineJoin::Bevel
+            } else {
+                self.join
+            };
             segment.offset(-self.radius, join, &mut self.output);
         }
     }
@@ -225,7 +248,11 @@ impl<'a> ContourStrokeToFill<'a> {
         for (segment_index, segment) in segments.iter().enumerate() {
             // FIXME(pcwalton): We negate the radius here so that round end caps can be drawn
             // clockwise. Of course, we should just implement anticlockwise arcs to begin with...
-            let join = if segment_index == 0 { LineJoin::Bevel } else { self.join };
+            let join = if segment_index == 0 {
+                LineJoin::Bevel
+            } else {
+                self.join
+            };
             segment.offset(-self.radius, join, &mut self.output);
         }
     }
@@ -233,11 +260,13 @@ impl<'a> ContourStrokeToFill<'a> {
 
 trait Offset {
     fn offset(&self, distance: f32, join: LineJoin, contour: &mut Contour);
-    fn add_to_contour(&self,
-                      distance: f32,
-                      join: LineJoin,
-                      join_point: Vector2F,
-                      contour: &mut Contour);
+    fn add_to_contour(
+        &self,
+        distance: f32,
+        join: LineJoin,
+        join_point: Vector2F,
+        contour: &mut Contour,
+    );
     fn offset_once(&self, distance: f32) -> Self;
     fn error_is_within_tolerance(&self, other: &Segment, distance: f32) -> bool;
 }
@@ -264,11 +293,13 @@ impl Offset for Segment {
         after.offset(distance, join, contour);
     }
 
-    fn add_to_contour(&self,
-                      distance: f32,
-                      join: LineJoin,
-                      join_point: Vector2F,
-                      contour: &mut Contour) {
+    fn add_to_contour(
+        &self,
+        distance: f32,
+        join: LineJoin,
+        join_point: Vector2F,
+        contour: &mut Contour,
+    ) {
         // Add join if necessary.
         if contour.might_need_join(join) {
             let p3 = self.baseline.from();
@@ -398,11 +429,13 @@ impl Contour {
         }
     }
 
-    fn add_join(&mut self,
-                distance: f32,
-                join: LineJoin,
-                join_point: Vector2F,
-                next_tangent: LineSegment2F) {
+    fn add_join(
+        &mut self,
+        distance: f32,
+        join: LineJoin,
+        join_point: Vector2F,
+        next_tangent: LineSegment2F,
+    ) {
         let (p0, p1) = (self.position_of_last(2), self.position_of_last(1));
         let prev_tangent = LineSegment2F::new(p0, p1);
 
@@ -450,10 +483,14 @@ impl Default for StrokeStyle {
 
 impl Default for LineCap {
     #[inline]
-    fn default() -> LineCap { LineCap::Butt }
+    fn default() -> LineCap {
+        LineCap::Butt
+    }
 }
 
 impl Default for LineJoin {
     #[inline]
-    fn default() -> LineJoin { LineJoin::Miter(10.0) }
+    fn default() -> LineJoin {
+        LineJoin::Miter(10.0)
+    }
 }
