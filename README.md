@@ -1,11 +1,15 @@
-# Pathfinder 3
+<img src="https://github.com/doggo-ninja/pathfinder/raw/master/resources/textures/pathfinder-logo.png" alt="Logo" style="display: block; margin: 0 auto; width: min(200px, 100%);">
 
-![Logo](https://github.com/servo/pathfinder/raw/master/resources/textures/pathfinder-logo.png)
+# Pathfinder 3 - Doggo.Ninja Fork
 
 Pathfinder 3 is a fast, practical, GPU-based rasterizer for fonts and vector graphics using OpenGL
 3.0+, OpenGL ES 3.0+, WebGL 2, and Metal.
 
 Please note that Pathfinder is under heavy development and is incomplete in various areas.
+
+⚠️ **Fork notice:** Most (if not all) of the team maintaining Pathfinder were [laid off](https://www.theverge.com/2020/8/11/21363424/mozilla-layoffs-quarter-staff-250-people-new-revenue-focus) in 2020. As such, Pathfinder's development slowed down significantly. We rely on Pathfinder for software we're currently building, and as such will try to maintain this fork of it.
+
+While we likely won't make many changes, we will make some. We also welcome external contribution.
 
 ## Quick start
 
@@ -17,7 +21,7 @@ vector rendering to any Rust or C/C++ app with it. The library is available on `
 ### Demos
 
 Demo app sources are available in
-[demo/native](https://github.com/servo/pathfinder/tree/master/demo/native). Simply run:
+[demo/native](https://github.com/doggo-ninja/pathfinder/tree/master/demo/native). Simply run:
 
     $ cd demo/native
     $ cargo run --release
@@ -113,14 +117,12 @@ The entire Pathfinder community, including the chat room and GitHub project, is 
 by the same Code of Conduct that the Rust project itself follows. (At the moment, the authors will
 handle violations.)
 
-## Build status
-
-[![Build Status](https://travis-ci.org/servo/pathfinder.svg?branch=master)](https://travis-ci.org/servo/pathfinder)
-
 ## Authors
 
 The primary author is Patrick Walton (@pcwalton), with contributions from the Servo development
 community.
+
+This fork is maintained by Kognise and the Doggo.Ninja team.
 
 The logo was designed by Jay Vining.
 
