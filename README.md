@@ -1,4 +1,4 @@
-<img src="https://github.com/doggo-ninja/pathfinder/raw/master/resources/textures/pathfinder-logo.png" alt="Logo" style="display: block; margin: 0 auto; width: min(200px, 100%);">
+<div align="center"><img src="https://github.com/doggo-ninja/pathfinder/raw/master/resources/textures/pathfinder-logo.png" width="260" alt="Logo" style="display: block;"></div>
 
 # Pathfinder 3 - Doggo.Ninja Fork
 
