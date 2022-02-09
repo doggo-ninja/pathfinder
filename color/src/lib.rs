@@ -37,6 +37,16 @@ impl ColorU {
     }
 
     #[inline]
+    pub const fn transparent_white() -> ColorU {
+        ColorU {
+            r: 255,
+            g: 255,
+            b: 255,
+            a: 0,
+        }
+    }
+
+    #[inline]
     pub const fn from_u32(rgba: u32) -> ColorU {
         ColorU {
             r: (rgba >> 24) as u8,
@@ -147,6 +157,11 @@ impl ColorF {
     #[inline]
     pub fn transparent_black() -> ColorF {
         ColorF::default()
+    }
+
+    #[inline]
+    pub fn transparent_white() -> ColorF {
+        ColorF(F32x4::new(1.0, 1.0, 1.0, 0.0))
     }
 
     #[inline]

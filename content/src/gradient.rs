@@ -188,7 +188,7 @@ impl Gradient {
     }
 
     /// A convenience method equivalent to
-    /// `gradient.add_color_stop(ColorStop::new(color, offset))`.
+    /// `gradient.add(ColorStop::new(color, offset))`.
     #[inline]
     pub fn add_color_stop(&mut self, color: ColorU, offset: f32) {
         self.add(ColorStop::new(color, offset))

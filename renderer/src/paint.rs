@@ -160,6 +160,12 @@ impl Paint {
         Paint::from_color(ColorU::transparent_black())
     }
 
+    /// A convenience function to create a transparent paint with all channels set to max brightness.
+    #[inline]
+    pub fn transparent_white() -> Paint {
+        Paint::from_color(ColorU::transparent_white())
+    }
+
     /// Returns true if this paint is obviously opaque, via a quick check.
     ///
     /// Even if the paint is opaque, this function might return false.
